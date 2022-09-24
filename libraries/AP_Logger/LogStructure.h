@@ -135,8 +135,18 @@ const struct MultiplierStructure log_Multipliers[] = {
 #include <AP_ESC_Telem/LogStructure.h>
 #include <AP_AIS/LogStructure.h>
 
+#include <AP_GPS/LogStructure_RTK.h>
+#include <AC_DroneShowManager/LogStructure.h>
+
 // structure used to define logging format
+// It is packed on ChibiOS to save flash space; however, this causes problems
+// when building the SITL on an Apple M1 CPU (and is also slower) so we do not
+// pack it by default
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 struct PACKED LogStructure {
+#else
+struct LogStructure {
+#endif
     uint8_t msg_type;
     uint8_t msg_len;
     const char *name;
@@ -729,13 +739,6 @@ struct PACKED log_VER {
     uint16_t _APJ_BOARD_ID;
 };
 
-struct PACKED log_GPSRTKPacket {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    uint16_t type;
-    uint16_t length;
-};
-
 
 // FMT messages define all message formats other than FMT
 // UNIT messages define units which can be referenced by FMTU messages
@@ -1278,11 +1281,6 @@ struct PACKED log_GPSRTKPacket {
 // @Field: ThrAvMx: Maximum average throttle that can be used to maintain attitude controll, derived from throttle mix params
 // @Field: FailFlags: bit 0 motor failed, bit 1 motors balanced, should be 2 in normal flight
 
-// CollMot-specific log messages
-#define LOG_COLLMOT_STRUCTURES \
-    { LOG_GPS_RTK_PACKET_MSG, sizeof(log_GPSRTKPacket), \
-      "RTK", "QHH", "TimeUS,Type,Length", "s-b", "F--" }
-
 // messages for all boards
 #define LOG_COMMON_STRUCTURES \
     { LOG_FORMAT_MSG, sizeof(log_Format), \
@@ -1407,7 +1405,8 @@ LOG_STRUCTURE_FROM_AIS, \
       "VER",   "QBHBBBBIZH", "TimeUS,BT,BST,Maj,Min,Pat,FWT,GH,FWS,APJ", "s---------", "F---------", false }, \
     { LOG_MOTBATT_MSG, sizeof(log_MotBatt), \
       "MOTB", "QffffB",  "TimeUS,LiftMax,BatVolt,ThLimit,ThrAvMx,FailFlags", "s-----", "F-----" , true }, \
-LOG_COLLMOT_STRUCTURES
+LOG_STRUCTURE_FROM_DRONE_SHOW, \
+LOG_STRUCTURE_FROM_GPS_RTK
 
 // message types 0 to 63 reserved for vehicle specific use
 
@@ -1458,9 +1457,6 @@ enum LogMessages : uint8_t {
     // LOG_MODE_MSG is used as a check for duplicates. Do not add between this and LOG_FORMAT_MSG
     LOG_MODE_MSG,
 
-    // CollMot-specific messages come here, IDs decreasing from 127
-    LOG_GPS_RTK_PACKET_MSG = 127,
-
     LOG_FORMAT_MSG = 128, // this must remain #128
 
     LOG_IDS_FROM_DAL,
@@ -1494,9 +1490,12 @@ enum LogMessages : uint8_t {
     LOG_MOTBATT_MSG,
     LOG_VER_MSG,
 
+    LOG_IDS_FROM_DRONE_SHOW,
+    LOG_IDS_FROM_GPS_RTK,
+
     _LOG_LAST_MSG_
 };
 
 // we reserve ID #255 for future expansion
 static_assert(_LOG_LAST_MSG_ < 255, "Too many message formats");
-static_assert(LOG_MODE_MSG < 127, "Duplicate message format IDs");
+static_assert(LOG_MODE_MSG < 128, "Duplicate message format IDs");

@@ -30,6 +30,9 @@ enum DroneShowLEDType {
 
     // LED light is driven over an I2C bus
     DroneShowLEDType_I2C = 7,
+
+    // LED light is attached to servo channels with inverted polarity
+    DroneShowLEDType_InvertedServo = 8,
 };
 
 class DroneShowLEDFactory

@@ -409,35 +409,6 @@ void Copter::Log_Write_Guided_Attitude_Target(ModeGuided::SubMode target_type, f
     logger.WriteBlock(&pkt, sizeof(pkt));
 }
 
-// drone show mode logging
-struct PACKED log_DroneShowStatus {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    int32_t show_clock_ms;
-    uint8_t stage;
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
-};
-
-// Write a drone show status log entry
-void Copter::Log_Write_DroneShowStatus()
-{
-    sb_rgb_color_t color;
-    g2.drone_show_manager.get_last_rgb_led_color(color);
-
-    struct log_DroneShowStatus pkt = {
-        LOG_PACKET_HEADER_INIT(LOG_DRONE_SHOW_MSG),
-        time_us         : AP_HAL::micros64(),
-        show_clock_ms   : g2.drone_show_manager.get_elapsed_time_since_start_msec(),
-        stage           : static_cast<uint8_t>(g2.drone_show_manager.get_stage_in_drone_show_mode()),
-        red             : color.red,
-        green           : color.green,
-        blue            : color.blue,
-    };
-    logger.WriteBlock(&pkt, sizeof(pkt));
-}
-
 // type and unit information can be found in
 // libraries/AP_Logger/Logstructure.h; search for "log_Units" for
 // units and "Format characters" for field type information
@@ -591,20 +562,6 @@ const struct LogStructure Copter::log_structure[] = {
 
     { LOG_GUIDED_ATTITUDE_TARGET_MSG, sizeof(log_Guided_Attitude_Target),
       "GUIA",  "QBffffffff",    "TimeUS,Type,Roll,Pitch,Yaw,RollRt,PitchRt,YawRt,Thrust,ClimbRt", "s-dddkkk-n", "F-000000-0" , true },
-
-// @LoggerMessage: SHOW
-// @Description: Drone show mode information
-// @Field: TimeUS: Time since system startup
-// @Field: ClockMS: Time on the show clock
-// @Field: Stage: Current stage of the show
-// @Field: R: Red component of current color in show
-// @Field: G: Green component of current color in show
-// @Field: B: Blue component of current color in show
-
-#if MODE_DRONE_SHOW_ENABLED == ENABLED
-    { LOG_DRONE_SHOW_MSG, sizeof(log_DroneShowStatus),
-      "SHOW", "QiBBBB", "TimeUS,ClockMS,Stage,R,G,B", "ss----", "F0----" },
-#endif
 };
 
 void Copter::Log_Write_Vehicle_Startup_Messages()
@@ -644,8 +601,6 @@ void Copter::Log_Write_Vehicle_Startup_Messages() {}
 #if FRAME_CONFIG == HELI_FRAME
 void Copter::Log_Write_Heli() {}
 #endif
-
-void Copter::Log_Write_DroneShowStatus() {}
 
 void Copter::log_init(void) {}
 

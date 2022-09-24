@@ -478,6 +478,7 @@ private:
         float target_speed;
         float target_accel;
         uint32_t last_pos_reset_ms;
+        bool overshoot;
     private:
         uint32_t last_state_change_ms;
         enum position_control_state state;
@@ -557,6 +558,10 @@ private:
 
     float last_land_final_agl;
 
+    // min alt for navigation in takeoff
+    AP_Float takeoff_navalt_min;
+    uint32_t takeoff_last_run_ms;
+    float takeoff_start_alt;
 
     // oneshot with duration ARMING_DELAY_MS used by quadplane to delay spoolup after arming:
     // ignored unless OPTION_DELAY_ARMING or OPTION_TILT_DISARMED is set

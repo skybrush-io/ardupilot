@@ -76,6 +76,7 @@ void RC_Channel_Copter::init_aux_function(const aux_func_t ch_option, const AuxS
     case AUX_FUNC::CIRCLE:
     case AUX_FUNC::DRIFT:
     case AUX_FUNC::DRONE_SHOW_START:
+    case AUX_FUNC::DRONE_SHOW_CRTL:
     case AUX_FUNC::FLIP:
     case AUX_FUNC::FLOWHOLD:
     case AUX_FUNC::FOLLOW:
@@ -625,8 +626,22 @@ bool RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const AuxSwi
                 AP::logger().Write_Event(LogEvent::DRONE_SHOW_START);
                 copter.g2.drone_show_manager.handle_rc_start_switch();
             }
-            break;
 #endif
+            break;
+
+        case AUX_FUNC::DRONE_SHOW_CRTL:
+#if MODE_DRONE_SHOW_ENABLED == ENABLED
+            // Switch is ignored when we are not in the droneshow mode, or when
+            // we have booted less than 5 seconds ago. This is because the
+            // aux switch function is triggered by ArduCopter right after boot
+            // if the RC is already turned on and the switch is in the high
+            // position.
+            if (copter.flightmode == &copter.mode_drone_show && AP_HAL::millis() > 5000) {
+                AP::logger().Write_Event(LogEvent::DRONE_SHOW_CRTL);
+                copter.g2.drone_show_manager.handle_rc_collective_rtl_switch();
+            }
+#endif
+            break;
 
     default:
         return RC_Channel::do_aux_function(ch_option, ch_flag);

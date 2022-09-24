@@ -144,7 +144,7 @@ enum class LogEvent : uint8_t {
     NOT_BOTTOMED = 166,
 
     DRONE_SHOW_START = 248,
-    DRONE_SHOW_STOP = 249,
+    DRONE_SHOW_CRTL = 249,
 };
 
 enum class LogDataID : uint8_t {
@@ -320,8 +320,6 @@ public:
     void Write_PSCN(float pos_target, float pos, float vel_desired, float vel_target, float vel, float accel_desired, float accel_target, float accel);
     void Write_PSCE(float pos_target, float pos, float vel_desired, float vel_target, float vel, float accel_desired, float accel_target, float accel);
     void Write_PSCD(float pos_target, float pos, float vel_desired, float vel_target, float vel, float accel_desired, float accel_target, float accel);
-
-    void Write_GPSRTKPacket(uint16_t type, uint16_t length);
 
     void Write(const char *name, const char *labels, const char *fmt, ...);
     void Write(const char *name, const char *labels, const char *units, const char *mults, const char *fmt, ...);
@@ -542,6 +540,7 @@ private:
 
     void start_io_thread(void);
     void io_thread();
+    bool check_crash_dump_save(void);
 
 #if HAL_LOGGER_FILE_CONTENTS_ENABLED
     // support for logging file content

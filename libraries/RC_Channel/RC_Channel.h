@@ -238,7 +238,8 @@ public:
         WALKING_HEIGHT =     211, // walking robot height input
 
         // inputs added for the drone show extension
-        DRONE_SHOW_START =   248, // drone show control
+        DRONE_SHOW_START =   248, // drone show control -- start switch
+        DRONE_SHOW_CRTL  =   249, // drone show control -- collective RTH switch
 
         // inputs for the use of onboard lua scripting
         SCRIPTING_1 =        300,

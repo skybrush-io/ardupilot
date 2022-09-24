@@ -99,6 +99,7 @@ namespace Colors {
 
 namespace CustomPackets {
     static const uint8_t START_CONFIG = 1;
+    static const uint8_t CRTL_TRIGGER = 2;
 
     typedef struct PACKED {
         // Start time to set on the drone, in GPS time of week (sec). Anything
@@ -114,6 +115,14 @@ namespace CustomPackets {
             int32_t countdown_msec;
         } optional_part;
     } start_config_t;
+
+    typedef struct PACKED {
+        // Timestamp to trigger collective RTL at, relative to the show start,
+        // in seconds. Zero is a special value, it clears any scheduled
+        // collective RTL for the future if the drone has not started the
+        // CRTL trajectory yet.
+        uint16_t start_time;
+    } crtl_trigger_t;
 };
 
 const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
@@ -179,7 +188,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: LED0_TYPE
     // @DisplayName: Assignment of LED channel 0 to a LED output type
     // @Description: Specifies where the output of the main LED light track of the show should be sent
-    // @Values: 0:Off, 1:MAVLink, 2:NeoPixel, 3:ProfiLED, 4:Debug, 5:SITL, 6:Servo, 7:I2C
+    // @Values: 0:Off, 1:MAVLink, 2:NeoPixel, 3:ProfiLED, 4:Debug, 5:SITL, 6:Servo, 7:I2C, 8:Inverted servo
     // @User: Advanced
     AP_GROUPINFO("LED0_TYPE", 6, AC_DroneShowManager, _params.led_specs[0].type, 0),
 
@@ -306,11 +315,12 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _start_time_unix_usec(0),
     _takeoff_time_sec(0),
     _landing_time_sec(0),
+    _crtl_start_time_sec(0),
     _total_duration_sec(0),
     _cancel_requested(false),
     _controller_update_delta_msec(1000 / DEFAULT_UPDATE_RATE_HZ),
     _rgb_led(0),
-    _rc_start_switch_blocked_until(0),
+    _rc_switches_blocked_until(0),
     _boot_count(0)
 {
     AP_Param::setup_object_defaults(this, var_info);
@@ -441,6 +451,119 @@ bool AC_DroneShowManager::configure_show_coordinate_system(
 void AC_DroneShowManager::get_color_of_rgb_light_at_seconds(float time, sb_rgb_color_t* color)
 {
     *color = sb_light_player_get_color_at(_light_player, time < 0 || time > 86400000 ? 0 : time * 1000);
+}
+
+bool AC_DroneShowManager::get_current_guided_mode_command_to_send(
+    GuidedModeCommand& command, bool altitude_locked_above_takeoff_altitude
+) {
+    Location loc;
+    static uint8_t invalid_velocity_warning_sent = 0;
+    static uint8_t invalid_acceleration_warning_sent = 0;
+    // static uint8_t counter = 0;
+
+    float elapsed = get_elapsed_time_since_start_sec();
+    
+    get_desired_global_position_at_seconds(elapsed, loc);
+
+    command.pos.zero();
+    command.vel.zero();
+    command.acc.zero();
+
+    if (loc.get_vector_from_origin_NEU(command.pos))
+    {
+        /*
+        counter++;
+        if (counter > 4) {
+            gcs().send_text(MAV_SEVERITY_INFO, "%.2f %.2f %.2f -- %.2f %.2f %.2f", pos.x, pos.y, pos.z, vel.x, vel.y, vel.z);
+        }
+        */
+
+        if (is_velocity_control_enabled())
+        {
+            float gain = get_velocity_feedforward_gain();
+
+            if (gain > 0)
+            {
+                get_desired_velocity_neu_in_cms_per_seconds_at_seconds(elapsed, command.vel);
+                command.vel *= gain;
+            }
+
+            // Prevent invalid velocity information from leaking into the guided
+            // mode controller
+            if (command.vel.is_nan() || command.vel.is_inf())
+            {
+                if (!invalid_velocity_warning_sent)
+                {
+                    gcs().send_text(MAV_SEVERITY_WARNING, "Invalid velocity command; using zero");
+                    invalid_velocity_warning_sent = true;
+                }
+                command.vel.zero();
+            }
+        }
+
+        if (is_acceleration_control_enabled())
+        {
+            get_desired_acceleration_neu_in_cms_per_seconds_squared_at_seconds(elapsed, command.acc);
+
+            // Prevent invalid acceleration information from leaking into the guided
+            // mode controller
+            if (command.acc.is_nan() || command.acc.is_inf())
+            {
+                if (!invalid_acceleration_warning_sent)
+                {
+                    gcs().send_text(MAV_SEVERITY_WARNING, "Invalid acceleration command; using zero");
+                    invalid_acceleration_warning_sent = true;
+                }
+                command.acc.zero();
+            }
+        }
+
+        // Prevent the drone from temporarily sinking below the takeoff altitude
+        // if the "real" trajectory has a slow takeoff
+        if (altitude_locked_above_takeoff_altitude) {
+            int32_t target_altitude_above_home_cm;
+            int32_t takeoff_altitude_cm;
+
+            if (loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, target_altitude_above_home_cm)) {
+                takeoff_altitude_cm = get_takeoff_altitude_cm();
+                if (target_altitude_above_home_cm < takeoff_altitude_cm) {
+                    // clamp the position to the target altitude, and zero out
+                    // the Z component of the velocity and the acceleration
+                    loc.set_alt_cm(takeoff_altitude_cm, Location::AltFrame::ABOVE_HOME);
+                    if (loc.get_vector_from_origin_NEU(command.pos)) {
+                        command.vel.z = 0;
+                        command.acc.z = 0;
+                    } else {
+                        // this should not happen either, but let's handle this
+                        // gracefully
+                        command.unlock_altitude = true;
+                    }
+                } else {
+                    // we want to go above the takeoff altitude so we can
+                    // release the lock
+                    command.unlock_altitude = true;
+                }
+            } else {
+                // let's not blow up if get_alt_cm() fails, it's not mission-critical,
+                // just release the lock
+                command.unlock_altitude = true;
+            }
+        }
+
+        // Prevent invalid position information from leaking into the guided
+        // mode controller
+        if (command.pos.is_nan() || command.pos.is_inf())
+        {
+            return false;
+        }
+
+        return true;
+    }
+    else
+    {
+        // No EKF origin yet, this should not have happened
+        return false;
+    }
 }
 
 void AC_DroneShowManager::get_desired_global_position_at_seconds(float time, Location& loc)
@@ -781,6 +904,10 @@ void AC_DroneShowManager::notify_drone_show_mode_entered_stage(DroneShowModeStag
 
     _stage_in_drone_show_mode = stage;
 
+    // Whenever we change the state, we clear the scheduled start time of a
+    // collective RTL trajectory
+    clear_scheduled_collective_rtl(/* force = */ true);
+
     // Force-update preflight checks so we see the errors immediately if we
     // switched to the "waiting for start time" stage
     _update_preflight_check_result(/* force = */ true);
@@ -925,16 +1052,15 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
 
 void AC_DroneShowManager::handle_rc_start_switch()
 {
-    if (_rc_start_switch_blocked_until && _rc_start_switch_blocked_until >= AP_HAL::millis())
+    if (_are_rc_switches_blocked())
     {
-        // The switch is ignored at the moment
         return;
     }
 
-    if (schedule_delayed_start(10000 /* msec */)) {
+    if (schedule_delayed_start_after(10000 /* msec */)) {
         // Rewrite the start time source to be "RC switch", not
         // "start method", even though we implemented it using
-        // the schedule_delayed_start() method
+        // the schedule_delayed_start_after() method
         if (_start_time_requested_by == StartTimeSource::START_METHOD) {
             _start_time_requested_by = StartTimeSource::RC_SWITCH;
         }
@@ -951,7 +1077,7 @@ bool AC_DroneShowManager::should_switch_to_show_mode_when_authorized() const
     return _params.show_mode_settings & 2;
 }
 
-bool AC_DroneShowManager::schedule_delayed_start(uint32_t delay_ms)
+bool AC_DroneShowManager::schedule_delayed_start_after(uint32_t delay_ms)
 {
     bool success = false;
 
@@ -1004,6 +1130,11 @@ void AC_DroneShowManager::update()
     }
 
     main_cycle = !main_cycle;
+}
+
+bool AC_DroneShowManager::_are_rc_switches_blocked()
+{
+    return _rc_switches_blocked_until && _rc_switches_blocked_until >= AP_HAL::millis();
 }
 
 void AC_DroneShowManager::_check_changes_in_parameters()
@@ -1123,7 +1254,13 @@ void AC_DroneShowManager::_check_events()
 void AC_DroneShowManager::_check_radio_failsafe()
 {
     if (AP_Notify::flags.failsafe_radio) {
-        _rc_start_switch_blocked_until = AP_HAL::millis() + 1000;
+        // Block the handling of RC switches for the next second so we don't
+        // accidentally trigger a function if the user changes the state of the
+        // RC switch while we are not connected to the RC.
+        //
+        // (E.g., switch is low, drone triggers RC failsafe because it is out
+        // of range, user changes the switch, then the drone reconnects)
+        _rc_switches_blocked_until = AP_HAL::millis() + 1000;
     }
 }
 
@@ -1244,13 +1381,26 @@ bool AC_DroneShowManager::_handle_custom_data_message(uint8_t type, void* data, 
                     if (countdown_msec < -GPS_WEEK_LENGTH_MSEC) {
                         clear_scheduled_start_time();
                     } else if (countdown_msec >= 0 && countdown_msec < GPS_WEEK_LENGTH_MSEC) {
-                        schedule_delayed_start(countdown_msec);
+                        schedule_delayed_start_after(countdown_msec);
                     }
                 }
 
                 return true;
             }
             break;
+
+        // Schedule collective RTL
+        case CustomPackets::CRTL_TRIGGER:
+            if (length >= sizeof(CustomPackets::crtl_trigger_t)) {
+                CustomPackets::crtl_trigger_t* crtl_trigger = static_cast<CustomPackets::crtl_trigger_t*>(data);
+                if (crtl_trigger->start_time == 0) {
+                    clear_scheduled_collective_rtl();
+                } else if (crtl_trigger->start_time > 0) {
+                    schedule_collective_rtl_at_show_timestamp_msec(
+                        crtl_trigger->start_time * 1000 /* [s] --> [msec] */
+                    );
+                }
+            }
     }
 
     return false;

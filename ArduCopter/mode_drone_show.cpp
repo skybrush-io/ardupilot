@@ -2,6 +2,8 @@
 
 #include <skybrush/colors.h>
 
+#if MODE_GUIDED_ENABLED == ENABLED
+
 /*
  * Implementation of drone show flight mode
  */
@@ -519,8 +521,6 @@ void ModeDroneShow::takeoff_start()
     // pretend that we were armed by the user by raising the throttle; the auto
     // takeoff routine won't work without this.
     copter.set_auto_armed(true);
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "Taking off");
 }
 
 // performs the takeoff stage
@@ -664,11 +664,9 @@ void ModeDroneShow::performing_start()
 
     // initialise guided start time and position as reference for limit checking
     copter.mode_guided.limit_init_time_and_pos();
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "Starting show");
 }
 
-// performs the takeoff stage
+// executes the show performance
 void ModeDroneShow::performing_run()
 {
     static uint32_t last_guided_command = 0;
@@ -719,8 +717,6 @@ void ModeDroneShow::landing_start()
 {
     _set_stage(DroneShow_Landing);
 
-    // gcs().send_text(MAV_SEVERITY_INFO, "Landing");
-
     // TODO(ntamas): set stopping point of loiter nav properly so we land as
     // close to our destination as possible
 
@@ -731,20 +727,6 @@ void ModeDroneShow::landing_start()
 // performs the landing stage
 void ModeDroneShow::landing_run()
 {
-    /*
-    uint64_t now = AP_HAL::micros64();
-    static uint64_t last = 0;
-
-    if (now - last >= 1000000) {
-        gcs().send_text(
-            MAV_SEVERITY_INFO, "Land complete: %s, spool state: %d",
-            copter.ap.land_complete ? "yes" : "no",
-            static_cast<int>(motors->get_spool_state())
-        );
-        last = now;
-    }
-    */
-
     // call regular land flight mode run function
     copter.mode_land.run();
 
@@ -775,8 +757,6 @@ bool ModeDroneShow::landing_completed() const
 void ModeDroneShow::rtl_start()
 {
     _set_stage(DroneShow_RTL);
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "Return to home");
 
     // call regular RTL flight mode initialisation and ask it to ignore checks
     copter.mode_rtl.init(/* ignore_checks = */ true);
@@ -817,11 +797,10 @@ void ModeDroneShow::loiter_start()
 
     // call regular position hold flight mode initialisation
     copter.mode_loiter.init(true);
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "Holding position");
 }
 
-// performs the return to landing position stage
+// performs the phase where we are holding our position indefinitely; this happens
+// when we exited show mode and then entered it again while in the air
 void ModeDroneShow::loiter_run()
 {
     // call regular position hold flight mode run function
@@ -832,8 +811,6 @@ void ModeDroneShow::loiter_run()
 void ModeDroneShow::landed_start()
 {
     _set_stage(DroneShow_Landed);
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "Landed successfully");
 
     copter.g2.drone_show_manager.notify_landed();
 }
@@ -905,125 +882,23 @@ void ModeDroneShow::notify_start_time_changed()
 // trajectory that the drone should follow
 bool ModeDroneShow::send_guided_mode_command_during_performance()
 {
-    Location loc;
-    Vector3f pos;
-    Vector3f vel;
-    Vector3f acc;
-    static uint8_t invalid_velocity_warning_sent = 0;
-    static uint8_t invalid_acceleration_warning_sent = 0;
-    // static uint8_t counter = 0;
+    AC_DroneShowManager::GuidedModeCommand command;
 
-    float elapsed = copter.g2.drone_show_manager.get_elapsed_time_since_start_sec();
-
-    copter.g2.drone_show_manager.get_desired_global_position_at_seconds(elapsed, loc);
-
-    if (loc.get_vector_from_origin_NEU(pos))
-    {
-        /*
-        counter++;
-        if (counter > 4) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%.2f %.2f %.2f -- %.2f %.2f %.2f", pos.x, pos.y, pos.z, vel.x, vel.y, vel.z);
-        }
-        */
-
-        vel.zero();
-        acc.zero();
-
-        if (copter.g2.drone_show_manager.is_velocity_control_enabled())
-        {
-            float gain = copter.g2.drone_show_manager.get_velocity_feedforward_gain();
-
-            if (gain > 0)
-            {
-                copter.g2.drone_show_manager.get_desired_velocity_neu_in_cms_per_seconds_at_seconds(elapsed, vel);
-                vel *= gain;
-            }
-
-            // Prevent invalid velocity information from leaking into the guided
-            // mode controller
-            if (vel.is_nan() || vel.is_inf())
-            {
-                if (!invalid_velocity_warning_sent)
-                {
-                    gcs().send_text(MAV_SEVERITY_WARNING, "Invalid velocity command; using zero");
-                    invalid_velocity_warning_sent = true;
-                }
-                vel.zero();
-            }
-        }
-
-        if (copter.g2.drone_show_manager.is_acceleration_control_enabled())
-        {
-            copter.g2.drone_show_manager.get_desired_acceleration_neu_in_cms_per_seconds_squared_at_seconds(elapsed, acc);
-
-            // Prevent invalid acceleration information from leaking into the guided
-            // mode controller
-            if (acc.is_nan() || acc.is_inf())
-            {
-                if (!invalid_acceleration_warning_sent)
-                {
-                    gcs().send_text(MAV_SEVERITY_WARNING, "Invalid acceleration command; using zero");
-                    invalid_acceleration_warning_sent = true;
-                }
-                acc.zero();
-            }
-        }
-
-        // Prevent the drone from temporarily sinking below the takeoff altitude
-        // if the "real" trajectory has a slow takeoff
-        if (_altitude_locked_above_takeoff_altitude) {
-            int32_t target_altitude_above_home_cm;
-            int32_t takeoff_altitude_cm;
-
-            if (loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, target_altitude_above_home_cm)) {
-                takeoff_altitude_cm = copter.g2.drone_show_manager.get_takeoff_altitude_cm();
-                if (target_altitude_above_home_cm < takeoff_altitude_cm) {
-                    // clamp the position to the target altitude, and zero out
-                    // the Z component of the velocity and the acceleration
-                    loc.set_alt_cm(takeoff_altitude_cm, Location::AltFrame::ABOVE_HOME);
-                    if (loc.get_vector_from_origin_NEU(pos)) {
-                        vel.z = 0;
-                        acc.z = 0;
-                    } else {
-                        // this should not happen either, but let's handle this
-                        // gracefully
-                        _altitude_locked_above_takeoff_altitude = false;
-                    }
-                } else {
-                    // we want to go above the takeoff altitude so we can
-                    // release the lock
-                    _altitude_locked_above_takeoff_altitude = false;
-                }
-            } else {
-                // let's not blow up if get_alt_cm() fails, it's not mission-critical,
-                // just release the lock
-                _altitude_locked_above_takeoff_altitude = false;
-            }
-        }
-
-        // Prevent invalid position information from leaking into the guided
-        // mode controller
-        if (pos.is_nan() || pos.is_inf())
-        {
-            return false;
-        }
-
-        // copter.mode_guided.set_destination() is for waypoint-based control.
-        // Position control is achieved on our side by clearing the velocity
-        // terms to zero. Yaw is forced to the initial bearing. If the pilot
-        // is yawing with the RC and pilot yaw input is allowed, this will be
-        // overridden later in mode_guided.posvelaccel_control_run()
+    if (copter.g2.drone_show_manager.get_current_guided_mode_command_to_send(
+        command, _altitude_locked_above_takeoff_altitude
+    )) {
         copter.mode_guided.set_destination_posvelaccel(
-            pos, vel, acc,
+            command.pos, command.vel, command.acc,
             /* use_yaw = */ true,
             copter.initial_armed_bearing /* [cd] */
         );
 
+        if (command.unlock_altitude) {
+            _altitude_locked_above_takeoff_altitude = false;
+        }
+
         return true;
-    }
-    else
-    {
-        // No EKF origin yet, this should not have happened
+    } else {
         return false;
     }
 }
@@ -1081,3 +956,9 @@ void ModeDroneShow::_set_stage(DroneShowModeStage value)
 
     copter.g2.drone_show_manager.notify_drone_show_mode_entered_stage(_stage);
 }
+
+#else
+
+#error "You need to enable guided mode support to use the drone show mode."
+
+#endif

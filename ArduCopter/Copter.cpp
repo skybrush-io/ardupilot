@@ -421,6 +421,18 @@ bool Copter::set_circle_rate(float rate_dps)
     return true;
 }
 
+// set desired speed (m/s). Used for scripting.
+bool Copter::set_desired_speed(float speed)
+{
+    // exit if vehicle is not in auto mode
+    if (!flightmode->is_autopilot()) {
+        return false;
+    }
+
+    wp_nav->set_speed_xy(speed * 100.0f);
+    return true;
+}
+
 // returns true if mode supports NAV_SCRIPT_TIME mission commands
 bool Copter::nav_scripting_enable(uint8_t mode)
 {
@@ -576,7 +588,7 @@ void Copter::twentyfive_hz_logging()
 
 #if MODE_DRONE_SHOW_ENABLED == ENABLED
     // log the current show state
-    Log_Write_DroneShowStatus();
+    g2.drone_show_manager.write_log_message();
 #endif
 }
 

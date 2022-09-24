@@ -39,12 +39,17 @@ DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
             break;
 
         case DroneShowLEDType_Servo:
+        case DroneShowLEDType_InvertedServo:
             if (
                 SRV_Channels::find_channel(SRV_Channel::k_scripting14, chan_red) &&
                 SRV_Channels::find_channel(SRV_Channel::k_scripting15, chan_green) &&
                 SRV_Channels::find_channel(SRV_Channel::k_scripting16, chan_blue)
             ) {
-                rgb_led = new RCOutputRGBLed(chan_red, chan_green, chan_blue);
+                if (type == DroneShowLEDType_InvertedServo) {
+                    rgb_led = new RCOutputRGBLedInverted(chan_red, chan_green, chan_blue);
+                } else {
+                    rgb_led = new RCOutputRGBLed(chan_red, chan_green, chan_blue);
+                }
             }
             break;
 
