@@ -19,6 +19,7 @@
 #include "AP_Beacon_Marvelmind.h"
 #include "AP_Beacon_Nooploop.h"
 #include "AP_Beacon_SITL.h"
+#include "AP_Beacon_LuminousBees.h"
 
 #include <AP_Common/Location.h>
 
@@ -100,6 +101,8 @@ void AP_Beacon::init(void)
         _driver = new AP_Beacon_Marvelmind(*this);
     } else if (_type == AP_BeaconType_Nooploop) {
         _driver = new AP_Beacon_Nooploop(*this);
+    } else if (_type == AP_BeaconType_LuminousBees) {
+        _driver = new AP_Beacon_LuminousBees(*this, serial_manager);
     }
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     if (_type == AP_BeaconType_SITL) {
