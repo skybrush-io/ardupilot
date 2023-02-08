@@ -1002,7 +1002,7 @@ void ModeGuided::set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, fl
     } else if (use_yaw_rate) {
         auto_yaw.set_rate(yaw_rate_cds);
     } else {
-        auto_yaw.set_mode_to_default(false);
+        // auto_yaw.set_mode_to_default(false);
     }
 }
 
