@@ -3,6 +3,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Notify/RCOutputRGBLed.h>
+#include <AP_Notify/RCOutputRGBWLed.h>
 #include <AP_Notify/SITL_SFML_LED.h>
 #include <SRV_Channel/SRV_Channel.h>
 
@@ -21,7 +22,7 @@ DroneShowLEDFactory::DroneShowLEDFactory()
 DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
     DroneShowLEDType type, uint8_t channel, uint8_t num_leds, float gamma
 ) {
-    uint8_t chan_red, chan_green, chan_blue;
+    uint8_t chan_white, chan_red, chan_green, chan_blue;
     RGBLed* rgb_led = NULL;
 
     DroneShowLED* result = NULL;
@@ -42,6 +43,17 @@ DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
         case DroneShowLEDType_Servo:
         case DroneShowLEDType_InvertedServo:
             if (
+                SRV_Channels::find_channel(SRV_Channel::k_scripting13, chan_white) &&
+                SRV_Channels::find_channel(SRV_Channel::k_scripting14, chan_red) &&
+                SRV_Channels::find_channel(SRV_Channel::k_scripting15, chan_green) &&
+                SRV_Channels::find_channel(SRV_Channel::k_scripting16, chan_blue)
+            ) {
+                if (type == DroneShowLEDType_InvertedServo) {
+                    rgb_led = new RCOutputRGBWLedInverted(chan_red, chan_green, chan_blue, chan_white);
+                } else {
+                    rgb_led = new RCOutputRGBWLed(chan_red, chan_green, chan_blue, chan_white);
+                }
+            }else if (
                 SRV_Channels::find_channel(SRV_Channel::k_scripting14, chan_red) &&
                 SRV_Channels::find_channel(SRV_Channel::k_scripting15, chan_green) &&
                 SRV_Channels::find_channel(SRV_Channel::k_scripting16, chan_blue)
