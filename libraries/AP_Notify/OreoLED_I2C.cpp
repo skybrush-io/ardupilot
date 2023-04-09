@@ -19,6 +19,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
+#include <GCS_MAVLink/GCS.h>
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include "OreoLED_I2C.h"
@@ -175,7 +176,6 @@ bool OreoLED_I2C::mode_failsafe_gcs()
     }
     return AP_Notify::flags.failsafe_gcs;
 }
-
 
 // Procedure to set standard rear LED colors in aviation theme
 // Back LEDS White for normal, yellow for GPS not usable, purple for EKF bad]
@@ -559,6 +559,15 @@ void OreoLED_I2C::send_sync(void)
     _dev->set_retries(2);
 }
 
+//Added to allow for rgb_control from AP Notify for OreoLED
+void OreoLED_I2C::rgb_control(uint8_t r, uint8_t g, uint8_t b, uint8_t rate_hz)
+{
+    if (rate_hz == 0) {
+        set_rgb(OREOLED_INSTANCE_ALL, OREOLED_PATTERN_SOLID, r, g, b);
+        gcs().send_text(MAV_SEVERITY_WARNING, "Oreo LED - rgb control");
+    }
+    return;
+}
 
 
 // Handle an LED_CONTROL mavlink message
@@ -567,6 +576,8 @@ void OreoLED_I2C::handle_led_control(const mavlink_message_t &msg)
     // decode mavlink message
     mavlink_led_control_t packet;
     mavlink_msg_led_control_decode(&msg, &packet);
+
+    gcs().send_text(MAV_SEVERITY_WARNING, "Running LED CONTROL RGB VALUES");
 
     // exit immediately if instance is invalid
     if (packet.instance >= OREOLED_NUM_LEDS && packet.instance != OREOLED_INSTANCE_ALL) {
