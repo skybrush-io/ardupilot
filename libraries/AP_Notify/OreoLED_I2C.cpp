@@ -563,8 +563,8 @@ void OreoLED_I2C::send_sync(void)
 void OreoLED_I2C::rgb_control(uint8_t r, uint8_t g, uint8_t b, uint8_t rate_hz)
 {
     if (rate_hz == 0) {
+        _pattern_override = OREOLED_PATTERN_SOLID;
         set_rgb(OREOLED_INSTANCE_ALL, OREOLED_PATTERN_SOLID, r, g, b);
-        gcs().send_text(MAV_SEVERITY_WARNING, "Oreo LED - rgb control");
     }
     return;
 }
@@ -576,8 +576,6 @@ void OreoLED_I2C::handle_led_control(const mavlink_message_t &msg)
     // decode mavlink message
     mavlink_led_control_t packet;
     mavlink_msg_led_control_decode(&msg, &packet);
-
-    gcs().send_text(MAV_SEVERITY_WARNING, "Running LED CONTROL RGB VALUES");
 
     // exit immediately if instance is invalid
     if (packet.instance >= OREOLED_NUM_LEDS && packet.instance != OREOLED_INSTANCE_ALL) {
