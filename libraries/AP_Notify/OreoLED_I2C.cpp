@@ -19,7 +19,6 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
-#include <GCS_MAVLink/GCS.h>
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include "OreoLED_I2C.h"
@@ -176,6 +175,7 @@ bool OreoLED_I2C::mode_failsafe_gcs()
     }
     return AP_Notify::flags.failsafe_gcs;
 }
+
 
 // Procedure to set standard rear LED colors in aviation theme
 // Back LEDS White for normal, yellow for GPS not usable, purple for EKF bad]
