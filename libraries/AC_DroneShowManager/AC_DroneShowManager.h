@@ -494,7 +494,7 @@ private:
         AP_Int8 show_mode_settings;
 
         // Brightness of status light signals when the drone is on the ground
-        AP_Int8 preflight_light_signal_brightness;
+        AP_Float preflight_light_signal_brightness;
 
         // Bitmask to set up various aspects of the control algorithm
         AP_Int16 control_mode_flags;

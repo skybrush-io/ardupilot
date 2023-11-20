@@ -240,7 +240,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Range: 0 3
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("PRE_LIGHTS", 10, AC_DroneShowManager, _params.preflight_light_signal_brightness, 2),
+    AP_GROUPINFO("PRE_LIGHTS", 10, AC_DroneShowManager, _params.preflight_light_signal_brightness, 2.0f),
 
     // @Param: CTRL_MODE
     // @DisplayName: Flags to configure the show position control algorithm
@@ -353,6 +353,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
 static DroneShowLEDFactory _rgb_led_factory_singleton;
 
 static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage);
+static bool are_almost_equal(float a, float b);
 static float get_modulation_factor_for_light_effect(
     uint32_t timestamp, LightEffectType effect, uint16_t period_msec, uint16_t phase_msec
 );
@@ -2053,7 +2054,7 @@ void AC_DroneShowManager::_update_lights()
     sb_rgb_color_t color = Colors::BLACK;
     bool light_signal_affected_by_brightness_setting = true;
     bool enhance_brightness = false;
-    int brightness = _params.preflight_light_signal_brightness;
+    float brightness = _params.preflight_light_signal_brightness;
     uint8_t pattern = 0b11111111;
     const uint8_t BLINK = 0b11110000;
     const uint8_t BLINK_TWICE_PER_SECOND = 0b11001100;
@@ -2090,8 +2091,8 @@ void AC_DroneShowManager::_update_lights()
 
         // Make sure that this light signal is visible with a minimum intensity
         // if the user otherwise turned off the light signals
-        if (brightness < 1) {
-            brightness = 1;
+        if (brightness <= 0) {
+            brightness = 0.333;
         }
     } else if (_light_signal.started_at_msec) {
         // If the user requested a light signal, it trumps everything except
@@ -2295,25 +2296,24 @@ void AC_DroneShowManager::_update_lights()
 
     // Dim the lights if we are on the ground before the flight
     if (light_signal_affected_by_brightness_setting) {
-        uint8_t shift = 0;
+        float percent = 1.0;
 
-        if (brightness <= 0) {
+        if (brightness <= 0.0) {
             // <= 0 = completely off, shift by 8 bits
-            shift = 8;
-        } else if (brightness == 1) {
+            percent = 0.0;
+        } else if (are_almost_equal(brightness, 1.0)) {
             // 1 = low brightness, keep the 6 MSB so the maximum is 64
-            shift = 2;
-        } else if (brightness == 2) {
+            percent = 0.333;
+        } else if (are_almost_equal(brightness, 2.0)) {
             // 2 = medium brightness, keep the 7 MSB so the maximum is 128
-            shift = 1;
-        } else {
-            // >= 2 = full brightness
-            shift = 0;
+            percent = 0.667;
+        } else if (brightness > 0.0 && brightness < 1.0) {
+            percent = brightness;
         }
-
-        color.red >>= shift;
-        color.green >>= shift;
-        color.blue >>= shift;
+        
+        color.red *= percent;
+        color.green *= percent;
+        color.blue *= percent;
     }
 
     _last_rgb_led_color = color;
@@ -2527,6 +2527,11 @@ static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage) {
         stage == DroneShow_WaitForStartTime ||
         stage == DroneShow_Landed
     );
+}
+
+static bool are_almost_equal(float a, float b) {
+    float epsilon = 1e-5;
+    return std::abs(a - b) < epsilon;
 }
 
 #endif  // HAVE_FILESYSTEM_SUPPORT
