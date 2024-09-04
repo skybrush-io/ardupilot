@@ -1,0 +1,3 @@
+# hw definition file for processing by chibios_hwdef.py
+
+include ../CubeOrangePlus/hwdef-bl.dat

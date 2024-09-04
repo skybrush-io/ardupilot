@@ -32,6 +32,10 @@ protected:
     uint16_t rx_bufsize() const override { return 128; }
     uint16_t tx_bufsize() const override { return 128; }
 
+#ifdef MT_A10_RADAR_WORKAROUND
+    uint16_t read_timeout_ms() const override { return 400; }
+#endif
+
 private:
 
     using AP_RangeFinder_Backend_Serial::AP_RangeFinder_Backend_Serial;
@@ -47,6 +51,10 @@ private:
     bool     _version_known;
     uint8_t  _header;
     uint8_t  _version;
+
+#ifdef MT_A10_RADAR_WORKAROUND
+    uint32_t _send_fake_valid_reading_until;
+#endif
 };
 
 #endif  // AP_RANGEFINDER_USD1_SERIAL_ENABLED

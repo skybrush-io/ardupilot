@@ -113,6 +113,14 @@ bool AP_RangeFinder_USD1_Serial::get_reading(float &reading_m)
     
     if (!detect_version()) {
         // return false if USD1_Serial version check failed
+#ifdef MT_A10_RANGEFINDER_WORKAROUND
+        // On the MT A10 drone we know which header byte and version will be
+        // used, but we do need to send fake readings as soon as possible
+        _version_known = true;
+        _header = USD1_HDR_V0;
+        _version = 0;
+#endif
+
         return false;
     }
 
@@ -162,7 +170,42 @@ bool AP_RangeFinder_USD1_Serial::get_reading(float &reading_m)
     }
 
     if (count == 0) {
+#ifdef MT_A10_RANGEFINDER_WORKAROUND
+        // HACK HACK HACK: if we haven't received a valid reading for a long
+        // time, simulate a reading with a relatively large distance. If we
+        // haven't ever received a valid reading, we send a relatively low
+        // distance instead to make sure that the proximity subsystem starts
+        // receiving valid data after a boot and does not go into "no data"
+        // state
+        uint32_t now = AP_HAL::millis();
+
+        if (now - state.last_reading_ms > read_timeout_ms() / 2) {
+            if (_send_fake_valid_reading_until == 0) {
+                /* never sent valid reading and we are early after boot so
+                 * start sending it now for 5 seconds, but at most up to 15
+                 * seconds after boot */
+                _send_fake_valid_reading_until = now + 5000;
+                if (_send_fake_valid_reading_until > 15000) {
+                    _send_fake_valid_reading_until = 15000;
+                }
+            }
+            if (AP_HAL::millis() < _send_fake_valid_reading_until) {
+                if (_version == 0 && _header != USD1_HDR) {
+                    sum = 200;    /* will be converted to 5m */
+                } else {
+                    sum = 500;    /* will be converted to 5m */
+                }
+            } else {
+                sum = 16383;  /* 2^14 - 1 */
+            }
+
+            count = 1;
+        } else {
+            return false;
+        }
+#else
         return false;
+#endif
     }
 
     reading_m = (sum * 0.01) / count;

@@ -1,0 +1,6 @@
+# hw definition file for processing by chibios_hwdef.py
+
+include ../CubeOrangePlus/hwdef.dat
+
+define MT_A10_RANGEFINDER_WORKAROUND
+
