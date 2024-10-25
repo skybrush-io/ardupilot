@@ -33,13 +33,17 @@ public:
     virtual void exit() override;
 
     bool requires_GPS() const override { return true; }
-    bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override;
     bool is_autopilot() const override { return true; }
     bool has_user_takeoff(bool must_navigate) const override { return true; }
     bool use_pilot_yaw() const override;
     /* in_guided_mode() should not return true because that would allow
      * scripting or GCS commands to mess around with the show execution */
+
+    /* Make sure that the drone does not react to manual throttle changes.
+     * This also disallows disarming with the rudder while the drone is in
+     * show mode but not flying */
+    bool has_manual_throttle() const override { return false; }
 
     bool is_landing() const override;
     bool is_taking_off() const override;
