@@ -31,6 +31,9 @@ from launch_ros.substitutions import FindPackageShare
 
 from .actions import ExecuteFunction
 
+TRUE_STRING = "True"
+FALSE_STRING = "False"
+BOOL_STRING_CHOICES = set([TRUE_STRING, FALSE_STRING])
 
 class VirtualPortsLaunch:
     """Launch functions for creating virtual ports using `socat`."""
@@ -284,28 +287,38 @@ class MAVProxyLaunch:
 
         # Retrieve launch arguments.
         master = LaunchConfiguration("master").perform(context)
-        # out = LaunchConfiguration("out").perform(context)
+        out = LaunchConfiguration("out").perform(context)
         sitl = LaunchConfiguration("sitl").perform(context)
+        console = LaunchConfiguration("console").perform(context)
+        map = LaunchConfiguration("map").perform(context)
 
         # Display launch arguments.
         print(f"command:          {command}")
         print(f"master:           {master}")
         print(f"sitl:             {sitl}")
+        print(f"out:              {out}")
+        print(f"console:          {console}")
+        print(f"map:              {map}")
+
+        cmd = [
+            f"{command} ",
+            f"--out {out} ",
+            "--out ",
+            "127.0.0.1:14551 ",
+            f"--master {master} ",
+            f"--sitl {sitl} ",
+            "--non-interactive ",
+        ]
+
+        if console == TRUE_STRING:
+            cmd.append("--console ")
+
+        if map == TRUE_STRING:
+            cmd.append("--map ")
 
         # Create action.
         mavproxy_process = ExecuteProcess(
-            cmd=[
-                [
-                    f"{command} ",
-                    "--out ",
-                    "127.0.0.1:14550 ",
-                    "--out ",
-                    "127.0.0.1:14551 ",
-                    f"--master {master} ",
-                    f"--sitl {sitl} ",
-                    "--non-interactive ",
-                ]
-            ],
+            cmd=cmd,
             shell=True,
             output="both",
             respawn=False,
@@ -355,6 +368,18 @@ class MAVProxyLaunch:
                 default_value="127.0.0.1:5501",
                 description="SITL output port.",
             ),
+            DeclareLaunchArgument(
+                "map",
+                default_value="False",
+                description="Enable MAVProxy Map.",
+                choices=BOOL_STRING_CHOICES
+            ),
+            DeclareLaunchArgument(
+                "console",
+                default_value="False",
+                description="Enable MAVProxy Console.",
+                choices=BOOL_STRING_CHOICES
+            ),
         ]
 
 
@@ -399,12 +424,12 @@ class SITLLaunch:
 
         # Optional arguments.
         wipe = LaunchConfiguration("wipe").perform(context)
-        if wipe == "True":
+        if wipe == TRUE_STRING:
             cmd_args.append("--wipe ")
             print(f"wipe:             {wipe}")
 
         synthetic_clock = LaunchConfiguration("synthetic_clock").perform(context)
-        if synthetic_clock == "True":
+        if synthetic_clock == TRUE_STRING:
             cmd_args.append("--synthetic-clock ")
             print(f"synthetic_clock:  {synthetic_clock}")
 
@@ -566,13 +591,13 @@ class SITLLaunch:
                 "wipe",
                 default_value="False",
                 description="Wipe eeprom.",
-                choices=["True", "False"],
+                choices=BOOL_STRING_CHOICES,
             ),
             DeclareLaunchArgument(
                 "synthetic_clock",
                 default_value="False",
                 description="Set synthetic clock mode.",
-                choices=["True", "False"],
+                choices=BOOL_STRING_CHOICES,
             ),
             DeclareLaunchArgument(
                 "home",

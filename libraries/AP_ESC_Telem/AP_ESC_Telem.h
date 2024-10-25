@@ -53,7 +53,7 @@ public:
     bool get_motor_temperature(uint8_t esc_index, int16_t& temp) const;
 
     // get the highest ESC temperature in centi-degrees if available, returns true if there is valid data for at least one ESC
-    bool get_highest_motor_temperature(int16_t& temp) const;
+    bool get_highest_temperature(int16_t& temp) const;
 
     // get an individual ESC's current in Ampere if available, returns true on success
     bool get_current(uint8_t esc_index, float& amps) const;
@@ -82,6 +82,9 @@ public:
     // get mask of ESCs that sent valid telemetry data in the last
     // ESC_TELEM_DATA_TIMEOUT_MS
     uint32_t get_active_esc_mask() const;
+
+    // return an active ESC with the highest RPM for the purposes of reporting (e.g. in the OSD)
+    uint8_t get_max_rpm_esc() const;
 
     // return the last time telemetry data was received in ms for the given ESC or 0 if never
     uint32_t get_last_telem_data_ms(uint8_t esc_index) const {

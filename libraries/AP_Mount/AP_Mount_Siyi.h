@@ -166,6 +166,7 @@ private:
         A8,
         ZR10,
         ZR30,
+        ZT6,
         ZT30
     } _hardware_model;
 
@@ -208,7 +209,7 @@ private:
         GimbalMountingDirection mounting_dir;
         VideoOutputStatus video_mode;
     } GimbalConfigInfo;
-    static_assert(sizeof(GimbalConfigInfo) == 7);
+    static_assert(sizeof(GimbalConfigInfo) == 7, "GimbalConfigInfo must be 7 bytes");
 
     // camera image types (aka lens)
     enum class CameraImageType : uint8_t {

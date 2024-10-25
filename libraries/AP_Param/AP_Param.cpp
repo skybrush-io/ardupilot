@@ -112,6 +112,9 @@ uint16_t AP_Param::param_overrides_len;
 uint16_t AP_Param::num_param_overrides;
 uint16_t AP_Param::num_read_only;
 
+// goes true if we run out of param space
+bool AP_Param::eeprom_full;
+
 ObjectBuffer_TS<AP_Param::param_save> AP_Param::save_queue{30};
 bool AP_Param::registered_save_handler;
 
@@ -969,7 +972,6 @@ AP_Param::find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token
 AP_Param* AP_Param::find_by_name(const char* name, enum ap_var_type *ptype, ParamToken *token)
 {
     AP_Param *ap;
-    uint16_t count = 0;
     for (ap = AP_Param::first(token, ptype);
          ap && *ptype != AP_PARAM_GROUP && *ptype != AP_PARAM_NONE;
          ap = AP_Param::next_scalar(token, ptype)) {
@@ -981,7 +983,6 @@ AP_Param* AP_Param::find_by_name(const char* name, enum ap_var_type *ptype, Para
                 break;
             }
         }
-        count++;
     }
     return ap;
 }
@@ -1194,6 +1195,8 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
         return;
     }
     if (ofs == (uint16_t) ~0) {
+        eeprom_full = true;
+        DEV_PRINTF("EEPROM full\n");
         return;
     }
 
@@ -1226,6 +1229,7 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
 
     if (ofs+type_size((enum ap_var_type)phdr.type)+2*sizeof(phdr) >= _storage.size()) {
         // we are out of room for saving variables
+        eeprom_full = true;
         DEV_PRINTF("EEPROM full\n");
         return;
     }

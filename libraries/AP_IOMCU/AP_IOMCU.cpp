@@ -637,8 +637,8 @@ bool AP_IOMCU::read_registers(uint8_t page, uint8_t offset, uint8_t count, uint1
 
     // wait for the expected number of reply bytes or timeout
     if (!uart.wait_timeout(count*2+4, 10)) {
-        debug("t=%lu timeout read page=%u offset=%u count=%u\n",
-              AP_HAL::millis(), page, offset, count);
+        debug("t=%lu timeout read page=%u offset=%u count=%u avail=%u\n",
+              AP_HAL::millis(), page, offset, count, uart.available());
         protocol_fail_count++;
         return false;
     }
@@ -1360,6 +1360,12 @@ void AP_IOMCU::set_GPIO_mask(uint8_t mask)
     trigger_event(IOEVENT_GPIO);
 }
 
+// Get GPIO mask of channels setup for output
+uint8_t AP_IOMCU::get_GPIO_mask() const
+{
+    return GPIO.channel_mask;
+}
+
 // write to a output pin
 void AP_IOMCU::write_GPIO(uint8_t pin, bool value)
 {
@@ -1375,6 +1381,17 @@ void AP_IOMCU::write_GPIO(uint8_t pin, bool value)
         GPIO.output_mask &= ~(1U << pin);
     }
     trigger_event(IOEVENT_GPIO);
+}
+
+// Read the last output value send to the GPIO pin
+// This is not a real read of the actual pin
+// This allows callers to check for state change
+uint8_t AP_IOMCU::read_virtual_GPIO(uint8_t pin) const
+{
+    if (!convert_pin_number(pin)) {
+        return 0;
+    }
+    return (GPIO.output_mask & (1U << pin)) != 0;
 }
 
 // toggle a output pin
