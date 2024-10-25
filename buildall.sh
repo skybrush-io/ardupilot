@@ -39,6 +39,7 @@ set -e
 BASE_BOARD_OF_cmcopter=Pixhawk1
 BASE_BOARD_OF_entron300=Pixhawk1
 BASE_BOARD_OF_lightdynamix_pixel=MatekH743-bdshot
+BASE_BOARD_OF_mt_a10=CubeOrangePlus
 
 cd "`dirname $0`"
 
