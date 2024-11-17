@@ -25,11 +25,12 @@
 # These variants are built but they are not officially supported:
 #
 # Pixhawk6C -- for the Holybro Pixhawk 6C and 6C Mini
+# speedybeef4v4 -- lack of feedback from the community yet but probably works
 #
 # You may define the BOARDS= variable in the environment to override which
 # boards to build for.
 
-BOARDS=${BOARDS:-"sitl Pixhawk1 cmcopter CubeBlack CubeOrange CubeOrangePlus entron300 fmuv3 fmuv4 fmuv5 Pixhawk4 Pixhawk6C PH4-mini Durandal luminousbee5 luminousbee-mini2 QioTekZealotH743 MatekH743 MatekH743-bdshot lightdynamix-pixel speedybeef4v3"}
+BOARDS=${BOARDS:-"sitl Pixhawk1 cmcopter CubeBlack CubeOrange CubeOrangePlus entron300 fmuv3 fmuv4 fmuv5 Pixhawk4 Pixhawk6C PH4-mini Durandal luminousbee5 luminousbee-mini2 QioTekZealotH743 MatekH743 MatekH743-bdshot lightdynamix-pixel speedybeef4v3 speedybeef4v4"}
 ARM_TOOLCHAIN=${ARM_TOOLCHAIN:-"${HOME}/opt/toolchains/ardupilot"}
 
 set -e
