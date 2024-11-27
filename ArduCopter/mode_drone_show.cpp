@@ -614,20 +614,23 @@ bool ModeDroneShow::takeoff_completed() const
                     show_manager->get_desired_global_position_at_seconds(elapsed, loc);
                     if (loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, desired_altitude_above_home_cm))
                     {
+                        // If the desired target is above our current altitude,
+                        // we can go to the next stage, otherwise we wait until
+                        // it catches up.
                         return desired_altitude_above_home_cm >= altitude_above_home_cm;
                     }
                     else
                     {
-                        // This should not happen either, especially because we've already been
-                        // through a successfull call to loc.get_alt_cm() if we managed to get
+                        // This should not happen, especially because we've already been
+                        // through a successful call to loc.get_alt_cm() if we managed to get
                         // here.
                         return false;
                     }
                 }
                 else
                 {
-                    // We are above 70% of the takeoff altitude but the trajectory
-                    // is behind so wait until it catches up
+                    // We are not above 70% of the takeoff altitude, so we continue
+                    // the takeoff procedure to rise higher.
                     return false;
                 }
             }

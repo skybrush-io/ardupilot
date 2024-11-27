@@ -299,6 +299,19 @@ public:
     // Returns the current stage that the drone show mode is in
     DroneShowModeStage get_stage_in_drone_show_mode() const { return _stage_in_drone_show_mode; }
 
+    // Returns the takeoff acceleration in meters per second squared
+    float get_motor_spool_up_time_sec() const;
+    
+    // Returns the takeoff acceleration in meters per second squared
+    float get_takeoff_acceleration_m_ss() const {
+        float result = _wp_nav ? _wp_nav->get_accel_z() / 100.0f : 0;
+        if (result <= 0) {
+            /* safety check */
+            result = DEFAULT_TAKEOFF_ACCELERATION_METERS_PER_SEC_SEC;
+        }
+        return result;
+    }
+
     // Returns the altitude to take off to above the current position of the drone, in centimeters
     int32_t get_takeoff_altitude_cm() const { return _params.takeoff_altitude_m * 100.0f; }
 
@@ -488,13 +501,19 @@ public:
     // AC_DroneShowManager.
     AC_HardFence hard_fence;
 
+    // Takeoff acceleration; we assume that the drone attempts to take off with
+    // this vertical acceleration if WPNAV_ACCEL_Z seems invalid
+    static constexpr float DEFAULT_TAKEOFF_ACCELERATION_METERS_PER_SEC_SEC = 1.0f;
+
     // Takeoff speed; we assume that the drone attempts to take off with this
     // vertical speed if WPNAV_SPEED_UP seems invalid
     static constexpr float DEFAULT_TAKEOFF_SPEED_METERS_PER_SEC = 1.0f;
 
-    // Landing altitude; the drone attempts to navigate to this altitude before
-    // starting landing at the end
-    static constexpr float LANDING_ALTITUDE_METERS = 3.0f;
+    // Motor spool up time; the drone starts its takeoff procedure with this
+    // amount of time needed to spin up the motors up to minimum throttle,
+    // before actually rising into the air. This parameter is used only if the
+    // value of MOT_SPOOL_TIME seems invalid
+    static constexpr float DEFAULT_MOTOR_SPOOL_UP_TIME_SEC = 0.5f;
 
 private:
     // Structure holding all the parameters settable by the user

@@ -806,6 +806,18 @@ bool AC_DroneShowManager::get_global_takeoff_position(Location& loc) const
     return true;
 }
 
+float AC_DroneShowManager::get_motor_spool_up_time_sec() const {
+    float value = 0.0f;
+
+    if (AP_Param::get("MOT_SPOOL_TIME", value)) {
+        if (value >= 0.0f) {
+            return value;
+        }
+    }
+
+    return DEFAULT_MOTOR_SPOOL_UP_TIME_SEC;
+}
+
 int64_t AC_DroneShowManager::get_time_until_start_usec() const
 {
     return -get_elapsed_time_since_start_usec();
@@ -1751,8 +1763,12 @@ void AC_DroneShowManager::_recalculate_trajectory_properties()
 
     _takeoff_time_sec = sb_trajectory_propose_takeoff_time_sec(
         _trajectory, get_takeoff_altitude_cm() * 10.0f /* [mm] */,
-        get_takeoff_speed_m_s() * 1000.0f /* [mm/s] */
+        get_takeoff_speed_m_s() * 1000.0f /* [mm/s] */,
+        get_takeoff_acceleration_m_ss() * 1000.0f /* [mm/s/s] */
     );
+
+    /* We need to takeoff earlier due to expected motor spool up time */
+    _takeoff_time_sec -= get_motor_spool_up_time_sec();
 
     /* We assume that we need to trigger landing at the end of the trajectory;
      * in other words, the trajectory should end above the landing position
