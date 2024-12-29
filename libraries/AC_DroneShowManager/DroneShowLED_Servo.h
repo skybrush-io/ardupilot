@@ -13,7 +13,7 @@ public:
     DroneShowLED_Servo(
         uint8_t red_channel, uint8_t green_channel,
         uint8_t blue_channel, uint8_t white_channel = 255,
-        bool inverted = false
+        bool inverted = false, bool use_servo_limits = false
     );
     ~DroneShowLED_Servo() {};
 
@@ -32,4 +32,5 @@ private:
     uint8_t _blue_channel;
     uint8_t _white_channel;
     bool _inverted;
+    bool _use_servo_limits;  // Whether to use servo min/max limits
 };
