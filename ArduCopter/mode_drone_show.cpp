@@ -157,12 +157,16 @@ void ModeDroneShow::run()
         break;
 
     case DroneShow_RTL:
-        // returning to home position (abnormal termination)
+        // returning to home position
+        // - either due to abnormal termination
+        // - or because the show is over and the post-show action is RTL or "RTL or land"
         rtl_run();
         break;
 
     case DroneShow_Loiter:
-        // holding position (joined show while airborne)
+        // holding position
+        // - either because joined the show while airborne
+        // - or because the show is over and the post-show action is "loiter"
         loiter_run();
         break;
 
@@ -721,8 +725,25 @@ void ModeDroneShow::performing_run()
         gcs().send_text(MAV_SEVERITY_CRITICAL, "Motors disarmed during show");
         error_start();
     } else if (performing_completed()) {
-        // if we have finished the show, land
-        landing_start();
+        // if we have finished the show, check the configured post-show action
+        // and switch to RTL, position hold or land
+        switch (copter.g2.drone_show_manager.get_action_at_end_of_show()) {
+            case PostAction_RTL:
+                rtl_start();
+                break;
+            case PostAction_Loiter:
+                loiter_start();
+                break;
+            case PostAction_Land:
+                landing_start();
+                break;
+            default:
+                // This should not happen but let's be defensive. Safest is to
+                // land in place, and it is consistent with legacy behaviour
+                gcs().send_text(MAV_SEVERITY_WARNING, "Invalid post-show action, landing in place");
+                landing_start();
+                break;
+        }
     }
 }
 
@@ -775,7 +796,8 @@ bool ModeDroneShow::landing_completed() const
 }
 
 // starts the phase where we are returning to our home position, used during
-// aborted shows
+// aborted shows or when the show trajectory has ended and the post-show action
+// is set up to "RTL" or "RTL or land"
 void ModeDroneShow::rtl_start()
 {
     _set_stage(DroneShow_RTL);

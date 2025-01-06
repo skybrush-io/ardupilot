@@ -93,6 +93,14 @@ enum TimeSyncMode {
     TimeSyncMode_GPS = 1 // Use SHOW_START_TIME and synchronize based on GPS time
 };
 
+// Possible actions to take at the end of the show
+enum PostAction {
+    PostAction_Loiter = 0, // Switch to loiter flight mode
+    PostAction_Land = 1,   // Switch to landing flight mode
+    PostAction_RTL = 2,    // Switch to RTL flight mode unconditionally
+    PostAction_RTLOrLand = 3 // Switch to RTL flight mode if above home, otherwise switch to landing flight mode
+};
+
 /// @class  AC_DroneShowManager
 /// @brief  Class managing the trajectory and light program of a drone show
 class AC_DroneShowManager {
@@ -257,6 +265,14 @@ public:
     // Returns the distance of the drone from its desired position during the
     // "Performing" stage of the show. Returns zero distance when not doing a show.
     void get_distance_from_desired_position(Vector3f& vec) const;
+
+    // Returns the action to perform at the end of the show. This function
+    // evaluates the SHOW_POST_ACTION parameter and the distance between the
+    // takeoff point and the current position of the drone to decide whether to
+    // RTL or land if the post-show action is set to "RTL or land", otherwise
+    // it returns the action set in the SHOW_POST_ACTION parameter. Note that
+    // the function is guaranteed never to return PostAction_RTLOrLand
+    PostAction get_action_at_end_of_show() const;
 
     // Retrieves the position where the drone is supposed to be at the start of the show.
     // Returns true if successful or false if the show coordinate system was not set up
@@ -585,6 +601,9 @@ private:
             // Color temperature of the white LED when the LED light channel uses an extra white LED
             AP_Float white_temperature;
         } led_specs[1];
+
+        // Action to take at the end of the show
+        AP_Int8 post_action;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -674,6 +693,11 @@ private:
 
     // Total duration of the show, in seconds
     float _total_duration_sec;
+
+    // Flag to indicate whether the trajectory ends at the same location where
+    // it started. This is used to determine whether the drone should land or
+    // return to the takeoff position at the end of the show.
+    bool _trajectory_is_circular;
 
     // Flag that is set to true if the user has instructed the drone show manager
     // to cancel the show as soon as possible. This is checked regularly by
@@ -783,8 +807,14 @@ private:
     // Returns true unconditionally if the drone is not performing a show.
     bool _is_at_expected_position() const;
     
-    // Returns whether the drone is close enough to its start position
-    bool _is_at_takeoff_position() const;
+    // Returns whether the drone is close enough to its start position in the
+    // horizontal plane. Note that the altitude is not checked here.
+    //
+    // The xy_threshold_m parameter specifies the maximum allowed distance
+    // between the current position and the takeoff position in the XY plane.
+    // Zero or negative values mean that the default threshold is used from the
+    // parameters.
+    bool _is_at_takeoff_position_xy(float xy_threshold = 0.0f) const;
     
     // Returns whether the drone is close enough to the given location. Distances
     // are checked separately in the XY plane and in the Z direction. Negative
@@ -797,7 +827,7 @@ private:
 
     // Recalculates the values of some internal variables that are derived from
     // the current trajectory when it is loaded.
-    void _recalculate_trajectory_properties();
+    bool _recalculate_trajectory_properties() WARN_IF_UNUSED;
 
     // Requests the vehicle to switch to drone show mode.
     virtual void _request_switch_to_show_mode() {};

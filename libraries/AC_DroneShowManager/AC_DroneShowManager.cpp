@@ -62,6 +62,12 @@
 // Default vertical trajectory drift tolerance level, in meters.
 #define DEFAULT_MAX_Z_DRIFT_METERS 3.0f
 
+// Default action to take when the show trajectory ends
+#define DEFAULT_POST_ACTION PostAction_RTLOrLand
+
+// Distance threshold for the trajectory to be considered circular, in meters.
+#define DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS 0.5f
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 // UDP port that the drone show manager uses to broadcast the status of the RGB light
 // when compiled with the SITL simulator. Uncomment if you need it.
@@ -310,7 +316,14 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("MAX_Z_ERR", 25, AC_DroneShowManager, _params.max_z_drift_during_show_m, DEFAULT_MAX_Z_DRIFT_METERS),
 
-    // Currently used max parameter ID: 25; update this if you add more parameters.
+    // @Param: POST_ACTION
+    // @DisplayName: Action to perform when the show trajectory ends
+    // @Description: Specifies what to do at the end of the show trajectory
+    // @Values: 3:RTL if above takeoff position and land otherwise,2:RTL unconditionally,1:Land,0:Loiter (position hold)
+    // @User: Advanced
+    AP_GROUPINFO("POST_ACTION", 26, AC_DroneShowManager, _params.post_action, DEFAULT_POST_ACTION),
+
+    // Currently used max parameter ID: 26; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
@@ -339,6 +352,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _landing_time_sec(0),
     _crtl_start_time_sec(0),
     _total_duration_sec(0),
+    _trajectory_is_circular(false),
     _cancel_requested(false),
     _controller_update_delta_msec(1000 / DEFAULT_UPDATE_RATE_HZ),
     _rgb_led(0),
@@ -758,7 +772,6 @@ int64_t AC_DroneShowManager::get_elapsed_time_since_start_usec() const
     }
 }
 
-// returns the elapsed time since the start of the show, in milliseconds
 int32_t AC_DroneShowManager::get_elapsed_time_since_start_msec() const
 {
     int64_t elapsed_usec = get_elapsed_time_since_start_usec();
@@ -783,6 +796,31 @@ float AC_DroneShowManager::get_elapsed_time_since_start_sec() const
     // when compiling in release mode, hence we use a large negative number
     // representing one day
     return elapsed_usec == INT64_MIN ? -86400 : static_cast<float>(elapsed_usec / 1000) / 1000.0f;
+}
+
+PostAction AC_DroneShowManager::get_action_at_end_of_show() const
+{
+    switch (_params.post_action) {
+        case PostAction_Land:
+            return PostAction_Land;
+
+        case PostAction_Loiter:
+            return PostAction_Loiter;
+
+        case PostAction_RTL:
+            return PostAction_RTL;
+
+        case PostAction_RTLOrLand:
+            return (
+                _is_at_takeoff_position_xy(2 * DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS) &&
+                _trajectory_is_circular
+            ) ? PostAction_RTL : PostAction_Land;
+
+        default:
+            // Legacy behaviour when we did not have a parameter for the
+            // post-show action
+            return PostAction_Land;
+    }
 }
 
 bool AC_DroneShowManager::get_global_takeoff_position(Location& loc) const
@@ -1514,7 +1552,7 @@ bool AC_DroneShowManager::_is_at_expected_position() const
     );
 }
 
-bool AC_DroneShowManager::_is_at_takeoff_position() const
+bool AC_DroneShowManager::_is_at_takeoff_position_xy(float xy_threshold) const
 {
     Location takeoff_loc;
     
@@ -1530,7 +1568,11 @@ bool AC_DroneShowManager::_is_at_takeoff_position() const
         return false;
     }
 
-    return _is_close_to_position(takeoff_loc, _params.max_xy_placement_error_m, 0);
+    return _is_close_to_position(
+        takeoff_loc,
+        xy_threshold > 0 ? xy_threshold : _params.max_xy_placement_error_m,
+        0
+    );
 }
 
 bool AC_DroneShowManager::_is_close_to_position(
@@ -1745,9 +1787,17 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     return success;
 }
 
-void AC_DroneShowManager::_recalculate_trajectory_properties()
+bool AC_DroneShowManager::_recalculate_trajectory_properties()
 {
+    sb_trajectory_stats_calculator_t stats_calculator;
+    sb_trajectory_stats_t stats;
     sb_vector3_with_yaw_t vec;
+    bool success = false;
+
+    if (sb_trajectory_stats_calculator_init(&stats_calculator, 1000.0f /* [mm] */) != SB_SUCCESS)
+    {
+        return false;
+    }
 
     if (sb_trajectory_player_get_position_at(_trajectory_player, 0, &vec) != SB_SUCCESS)
     {
@@ -1759,39 +1809,57 @@ void AC_DroneShowManager::_recalculate_trajectory_properties()
     _takeoff_position_mm.y = vec.y;
     _takeoff_position_mm.z = vec.z;
 
-    _total_duration_sec = sb_trajectory_get_total_duration_sec(_trajectory);
+    _total_duration_sec = 0;
+    _takeoff_time_sec = _landing_time_sec = -1;
+    _trajectory_is_circular = false;
 
-    _takeoff_time_sec = sb_trajectory_propose_takeoff_time_sec(
-        _trajectory, get_takeoff_altitude_cm() * 10.0f /* [mm] */,
-        get_takeoff_speed_m_s() * 1000.0f /* [mm/s] */,
-        get_takeoff_acceleration_m_ss() * 1000.0f /* [mm/s/s] */
-    );
+    stats_calculator.min_ascent = get_takeoff_altitude_cm() * 10.0f; /* [mm] */
+    stats_calculator.preferred_descent = stats_calculator.min_ascent;
+    stats_calculator.takeoff_speed = get_takeoff_speed_m_s() * 1000.0f; /* [mm/s] */
+    stats_calculator.acceleration = get_takeoff_acceleration_m_ss() * 1000.0f; /* [mm/s/s] */
 
-    /* We need to takeoff earlier due to expected motor spool up time */
-    _takeoff_time_sec -= get_motor_spool_up_time_sec();
-
-    /* We assume that we need to trigger landing at the end of the trajectory;
-     * in other words, the trajectory should end above the landing position
-     * by a safe altitude margin. This is because calculating an exact landing
-     * time onboard with the current trajectory format is too slow on a
-     * Pixhawk1 and we trigger a watchdog timer that resets the Pixhawk */
-    _landing_time_sec = _total_duration_sec;
-
-    // Make sure that we never take off before the scheduled start of the
-    // show, even if we are going to be a bit late with the takeoff
-    if (_takeoff_time_sec < 0)
+    if (sb_trajectory_stats_calculator_run(&stats_calculator, _trajectory, &stats) == SB_SUCCESS)
     {
-        _takeoff_time_sec = 0;
+        _total_duration_sec = stats.duration_sec;
+        _takeoff_time_sec = stats.takeoff_time_sec;
+        _landing_time_sec = stats.landing_time_sec;
+        success = true;
     }
 
-    // Check whether the landing time is later than the takeoff time. If it is
-    // earlier, it shows that there's something wrong with the trajectory so
-    // let's not take off at all.
-    if (_landing_time_sec < _takeoff_time_sec)
+    sb_trajectory_stats_calculator_destroy(&stats_calculator);
+
+    if (success)
+    {
+        // The trajectory is circular if the takeoff and landing positions are
+        // sufficiently close in the XY plane
+        _trajectory_is_circular = (
+            stats.start_to_end_distance_xy <=
+            DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS * 1000.0f /* [mm] */
+        );
+
+        // We need to takeoff earlier due to expected motor spool up time
+        _takeoff_time_sec -= get_motor_spool_up_time_sec();
+
+        // Make sure that we never take off before the scheduled start of the
+        // show, even if we are going to be a bit late with the takeoff
+        if (_takeoff_time_sec < 0)
+        {
+            _takeoff_time_sec = 0;
+        }
+
+        // Check whether the landing time is later than the takeoff time. If it is
+        // earlier, it shows that there's something wrong with the trajectory so
+        // let's not take off at all.
+        success = _landing_time_sec >= _takeoff_time_sec;
+    }
+
+    if (!success)
     {
         // This should ensure that has_valid_takeoff_time() returns false
         _landing_time_sec = _takeoff_time_sec = -1;
     }
+
+    return true;
 }
 
 void AC_DroneShowManager::_set_light_program_and_take_ownership(sb_light_program_t *value)
@@ -1846,7 +1914,9 @@ void AC_DroneShowManager::_set_trajectory_and_take_ownership(sb_trajectory_t *va
 
     sb_trajectory_player_init(_trajectory_player, _trajectory);
 
-    _recalculate_trajectory_properties();
+    if (!_recalculate_trajectory_properties()) {
+        _trajectory_valid = false;
+    }
 }
 
 void AC_DroneShowManager::_set_yaw_control_and_take_ownership(sb_yaw_control_t *value)
@@ -1895,7 +1965,7 @@ void AC_DroneShowManager::_update_preflight_check_result(bool force)
         _preflight_check_failures |= DroneShowPreflightCheck_ShowNotConfiguredYet;
     }
 
-    if (_tentative_show_coordinate_system.is_valid() && !_is_at_takeoff_position()) {
+    if (_tentative_show_coordinate_system.is_valid() && !_is_at_takeoff_position_xy()) {
         _preflight_check_failures |= DroneShowPreflightCheck_NotAtTakeoffPosition;
     }
 }
