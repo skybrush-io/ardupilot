@@ -7,8 +7,14 @@ def build(bld):
     bld.stlib(
         name='libskybrush',
         source=(
-            bld.path.parent.ant_glob('modules/libskybrush/src/**/*.c') +
-            bld.path.parent.ant_glob('modules/libskybrush/src/**/*.cpp')
+            bld.path.parent.ant_glob(
+                'modules/libskybrush/src/**/*.c',
+                excl='modules/libskybrush/src/tools'
+            ) +
+            bld.path.parent.ant_glob(
+                'modules/libskybrush/src/**/*.cpp',
+                excl='modules/libskybrush/src/tools'
+            )
         ),
         target='skybrush',
         defines=['NDEBUG'],
