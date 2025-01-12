@@ -50,6 +50,22 @@ enum DroneShowControlModeFlag {
     DroneShowControl_AccelerationControlEnabled = 2,
 };
 
+// Enum representing the authorization types for the start of the show
+enum DroneShowAuthorization : uint8_t {
+    // Show not authorized to start
+    DroneShowAuthorization_Revoked = 0,
+
+    // SHow authorized to start in live mode (all safety features enabled)
+    DroneShowAuthorization_Granted_Live = 1,
+
+    // Show authorized to start in rehearsal mode (bubble fence action forcibly
+    // set to reporting only)
+    DroneShowAuthorization_Granted_Rehearsal = 2,
+
+    // Show authorized to start with lights only, no takeoff is allowed
+    DroneShowAuthorization_Granted_Lights_Only = 3,
+};
+
 // Flags representing various failures in drone show specific preflight checks.
 // These are not part of the standard ArduPilot prearm check framework; we
 // check these periodically on our own when we are in the "waiting for start
@@ -550,8 +566,8 @@ private:
         // Orientation of drone show coordinate system, in degrees, as set in the parameters by the user
         AP_Float orientation_deg;
 
-        // Whether the drone has been authorized to start
-        AP_Int8 authorized_to_start;
+        // Authorization type of the show; see the DroneShowAuthorization enum
+        AP_Int8 authorization;
 
         // Whether the drone should boot in show mode, and whether we should enter show mode automatically when authorized
         AP_Int8 show_mode_settings;

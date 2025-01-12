@@ -86,7 +86,7 @@ namespace CustomPackets {
         // currently set. Negative number means that the start time must be
         // cleared.
         int32_t start_time;
-        uint8_t is_authorized;
+        DroneShowAuthorization authorization;
 
         struct PACKED {
             // Countdown, i.e. number of milliseconds until the start of the show.
@@ -158,11 +158,10 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: START_AUTH
     // @DisplayName: Authorization to start
     // @Description: Whether the drone is authorized to start the show
-    // @Range: 0 1
-    // @Increment: 1
+    // @Values: 0:Revoked, 1:Granted, 2:Granted in rehearsal mode, 3:Granted with lights only
     // @Volatile: True
     // @User: Standard
-    AP_GROUPINFO("START_AUTH", 5, AC_DroneShowManager, _params.authorized_to_start, 0),
+    AP_GROUPINFO("START_AUTH", 5, AC_DroneShowManager, _params.authorization, 0),
 
     // @Param: LED0_TYPE
     // @DisplayName: Assignment of LED channel 0 to a LED output type
@@ -439,7 +438,7 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     // subsystem has already loaded back the previous value from the EEPROM so
     // we are safe to overwrite it
     _params.start_time_gps_sec.set(-1);
-    _params.authorized_to_start.set(0);
+    _params.authorization.set(DroneShowAuthorization_Revoked);
 
     _load_show_file_from_storage();
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -967,11 +966,6 @@ bool AC_DroneShowManager::handle_message(const mavlink_message_t& msg)
     }
 }
 
-bool AC_DroneShowManager::has_authorization_to_start() const
-{
-    return _params.authorized_to_start;
-}
-
 bool AC_DroneShowManager::has_explicit_show_altitude_set_by_user() const
 {
     return _params.origin_amsl_mm >= SMALLEST_VALID_AMSL;
@@ -1286,7 +1280,7 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         !is_zero(_params.orientation_deg - last_seen_orientation_deg)
     );
     bool new_start_time_pending = _params.start_time_gps_sec != last_seen_start_time_gps_sec;
-    bool new_show_authorization_pending = _params.authorized_to_start != last_seen_show_authorization_state;
+    bool new_show_authorization_pending = _params.authorization != last_seen_show_authorization_state;
 
     if (new_coordinate_system_pending) {
         // We can safely mess around with the coordinate system as we are only
@@ -1341,7 +1335,7 @@ void AC_DroneShowManager::_check_changes_in_parameters()
     }
 
     if (new_show_authorization_pending) {
-        last_seen_show_authorization_state = _params.authorized_to_start;
+        last_seen_show_authorization_state = _params.authorization;
 
         // Show authorization state changed recently. We might need to switch
         // flight modes, but we cannot change flight modes from here so we just
@@ -1448,7 +1442,12 @@ bool AC_DroneShowManager::_handle_custom_data_message(uint8_t type, void* data, 
     switch (type) {
         // Broadcast start time and authorization state of the show
         case CustomPackets::START_CONFIG:
-            if (length >= offsetof(CustomPackets::start_config_t, optional_part)) {
+            {
+                if (length < offsetof(CustomPackets::start_config_t, optional_part)) {
+                    // Packet too short
+                    return false;
+                }
+
                 CustomPackets::start_config_t* start_config = static_cast<CustomPackets::start_config_t*>(data);
 
                 // Update start time expressed in GPS time of week
@@ -1459,20 +1458,23 @@ bool AC_DroneShowManager::_handle_custom_data_message(uint8_t type, void* data, 
                 }
 
                 // Update authorization flag
-                _params.authorized_to_start.set(start_config->is_authorized);
+                _params.authorization.set(start_config->authorization);
 
-                // Optional second part is used by the GCS to convey how many
-                // milliseconds there are until the start of the show. If this
-                // part exists and is positive, _and_ we are using the internal
-                // clock to synchronize the start, then we update the start
-                // time based on this
-                if (length >= sizeof(CustomPackets::start_config_t) && !uses_gps_time_for_show_start()) {
-                    int32_t countdown_msec = start_config->optional_part.countdown_msec;
+                // Do we have the optional second part?
+                if (length >= sizeof(CustomPackets::start_config_t)) {
+                    // Optional second part is used by the GCS to convey how many
+                    // milliseconds there are until the start of the show. If this
+                    // part exists and is positive, _and_ we are using the internal
+                    // clock to synchronize the start, then we update the start
+                    // time based on this
+                    if (!uses_gps_time_for_show_start()) {
+                        int32_t countdown_msec = start_config->optional_part.countdown_msec;
 
-                    if (countdown_msec < -GPS_WEEK_LENGTH_MSEC) {
-                        clear_scheduled_start_time();
-                    } else if (countdown_msec >= 0 && countdown_msec < GPS_WEEK_LENGTH_MSEC) {
-                        schedule_delayed_start_after(countdown_msec);
+                        if (countdown_msec < -GPS_WEEK_LENGTH_MSEC) {
+                            clear_scheduled_start_time();
+                        } else if (countdown_msec >= 0 && countdown_msec < GPS_WEEK_LENGTH_MSEC) {
+                            schedule_delayed_start_after(countdown_msec);
+                        }
                     }
                 }
 
