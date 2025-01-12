@@ -428,7 +428,7 @@ void AC_DroneShowManager::_update_lights()
             } else if (_preflight_check_failures) {
                 color = Colors::YELLOW;
                 pulse = 0.5;
-            } else if (has_authorization_to_start()) {
+            } else if (has_authorization()) {
                 if (get_time_until_landing_sec() < 0) {
                     // if we have already landed but show mode is reset from
                     // another mode, we just keep calm with solid green

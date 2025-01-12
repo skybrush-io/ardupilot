@@ -161,7 +161,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Values: 0:Revoked, 1:Granted, 2:Granted in rehearsal mode, 3:Granted with lights only
     // @Volatile: True
     // @User: Standard
-    AP_GROUPINFO("START_AUTH", 5, AC_DroneShowManager, _params.authorization, 0),
+    AP_GROUPINFO("START_AUTH", 5, AC_DroneShowManager, _params.authorization, DroneShowAuthorization_Revoked),
 
     // @Param: LED0_TYPE
     // @DisplayName: Assignment of LED channel 0 to a LED output type
@@ -1108,7 +1108,9 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
     if (AP::fence()->enabled()) {
         flags |= (1 << 3);
     }
-    if (has_authorization_to_start()) {
+    if (has_authorization()) {
+        // TODO(ntamas): we will eventually need to send the entire
+        // authorization type somewhere
         flags |= (1 << 2);
     }
     if (uses_gps_time_for_show_start() && !_is_gps_time_ok()) {
@@ -1340,7 +1342,7 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         // Show authorization state changed recently. We might need to switch
         // flight modes, but we cannot change flight modes from here so we just
         // set a flag.
-        if (has_authorization_to_start() && should_switch_to_show_mode_when_authorized()) {
+        if (has_authorization() && should_switch_to_show_mode_when_authorized()) {
             _request_switch_to_show_mode();
         }
     }

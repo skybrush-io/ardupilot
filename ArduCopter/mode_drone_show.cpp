@@ -188,10 +188,13 @@ void ModeDroneShow::run()
 // Checks changes in relevant parameter values and reports them to the console
 void ModeDroneShow::check_changes_in_parameters()
 {
-    static bool last_seen_authorization;
+    static DroneShowAuthorization last_seen_authorization;
     static uint64_t last_seen_start_time;
-    bool current_authorization = copter.g2.drone_show_manager.has_authorization_to_start();
-    uint64_t current_start_time = copter.g2.drone_show_manager.get_start_time_epoch_undefined();
+    DroneShowAuthorization current_authorization;
+    uint64_t current_start_time;
+
+    current_start_time = copter.g2.drone_show_manager.get_start_time_epoch_undefined();
+    current_authorization = copter.g2.drone_show_manager.get_authorization_type();
 
     if (current_start_time != last_seen_start_time) {
         last_seen_start_time = current_start_time;
@@ -427,8 +430,8 @@ void ModeDroneShow::wait_for_start_time_run()
             _home_position_set = false;
         }
 
-        // For the remaining parts, we need takeoff authorization
-        if (copter.g2.drone_show_manager.has_authorization_to_start()) {
+        // Handle starting or stopping the motors depending on the authorization
+        if (copter.g2.drone_show_manager.has_authorization_to_start_motors()) {
             if (time_until_takeoff_sec <= 8 && !_motors_started) {
                 // We attempt to start the motors 8 seconds before our takeoff time,
                 // and we keep on doing so until 5 seconds after the takeoff time, when
@@ -904,7 +907,10 @@ void ModeDroneShow::error_run()
 // changed in the drone show manager
 void ModeDroneShow::notify_authorization_changed()
 {
-    if (_stage == DroneShow_WaitForStartTime && copter.g2.drone_show_manager.has_authorization_to_start()) {
+    if (
+        _stage == DroneShow_WaitForStartTime &&
+        copter.g2.drone_show_manager.has_authorization()
+    ) {
         // Update home position and reset AGL to zero when the show is
         // authorized and we are in the "waiting for start time" phase
         try_to_update_home_position();

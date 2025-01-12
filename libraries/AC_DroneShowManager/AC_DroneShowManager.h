@@ -51,7 +51,7 @@ enum DroneShowControlModeFlag {
 };
 
 // Enum representing the authorization types for the start of the show
-enum DroneShowAuthorization : uint8_t {
+enum DroneShowAuthorization : int8_t {
     // Show not authorized to start
     DroneShowAuthorization_Revoked = 0,
 
@@ -231,6 +231,9 @@ public:
         int32_t lat, int32_t lon, int32_t amsl_mm, float orientation_deg
     ) WARN_IF_UNUSED;
 
+    // Returns the current authorization type of the show
+    DroneShowAuthorization get_authorization_type() const;
+
     // Returns the color of the LED light on the drone according to its light
     // program the given number of seconds after the start time.
     void get_color_of_rgb_light_at_seconds(float time, sb_rgb_color_t* color);
@@ -389,8 +392,12 @@ public:
     void handle_rc_collective_rtl_switch();
 
     // Returns whether the drone has been authorized to start automatically by the user
-    bool has_authorization_to_start() const;
+    bool has_authorization() const;
 
+    // Returns whether the drone is allowed to start its motors in the current
+    // authorization state
+    bool has_authorization_to_start_motors() const;
+    
     // Returns whether the show altitude was set explicitly by the user
     bool has_explicit_show_altitude_set_by_user() const;
 
