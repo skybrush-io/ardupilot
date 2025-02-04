@@ -33,6 +33,9 @@
 BOARDS=${BOARDS:-"sitl Pixhawk1 cmcopter CubeBlack CubeOrange CubeOrangePlus entron300 fmuv3 fmuv4 fmuv5 Pixhawk4 Pixhawk6C PH4-mini Durandal luminousbee5 luminousbee-mini2 QioTekZealotH743 MatekH743 MatekH743-bdshot lightdynamix-pixel speedybeef4v3 speedybeef4v4"}
 ARM_TOOLCHAIN=${ARM_TOOLCHAIN:-"${HOME}/opt/toolchains/ardupilot"}
 
+# Name of the folder to store compiled firmwares in
+DIST_DIR=dist
+
 set -e
 
 # Declare that some of the boards are based on other boards so we can re-use
@@ -43,7 +46,7 @@ BASE_BOARD_OF_lightdynamix_pixel=MatekH743-bdshot
 
 cd "`dirname $0`"
 
-mkdir -p dist/
+mkdir -p ${DIST_DIR}/
 
 if [ "x$PYTHON" = x ]; then
     PYTHON=python3
@@ -106,7 +109,12 @@ for BOARD in $BOARDS; do
 
     ./waf configure --board=$BOARD && ./waf copter
     if [ -f build/$BOARD/bin/arducopter.apj ]; then
-        cp build/$BOARD/bin/arducopter.apj dist/arducopter-skybrush-${BOARD_LOWER}-$DATE.apj
+        mkdir -p ${DIST_DIR}/${BOARD_LOWER}
+        cp build/$BOARD/bin/arducopter.apj ${DIST_DIR}/${BOARD_LOWER}/arducopter-skybrush-${BOARD_LOWER}-$DATE.apj
+    fi
+    if [ -f build/$BOARD/bin/arducopter_with_bl.hex ]; then
+        mkdir -p ${DIST_DIR}/${BOARD_LOWER}
+        cp build/$BOARD/bin/arducopter_with_bl.hex ${DIST_DIR}/${BOARD_LOWER}/arducopter-skybrush-${BOARD_LOWER}-$DATE.hex
     fi
 
     if [ x$BOARD = xcmcopter ]; then
