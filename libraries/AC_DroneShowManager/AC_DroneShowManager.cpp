@@ -1109,8 +1109,9 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
         flags |= (1 << 3);
     }
     if (has_authorization()) {
-        // TODO(ntamas): we will eventually need to send the entire
-        // authorization type somewhere
+        // This is superseded by the full authorization scope but we need to
+        // keep on sending this for backward compatibility with older GCS
+        // versions
         flags |= (1 << 2);
     }
     if (uses_gps_time_for_show_start() && !_is_gps_time_ok()) {
@@ -1136,10 +1137,14 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
     gps_health |= (gps.num_sats() > 31 ? 31 : gps.num_sats()) << 3;
 
     /* calculate third byte of status flags.
-     * Currently we use bits 0 and 1 for encoding the boot count modulo 4,
-     * and bit 7 to indicate that the drone has deviated from its expected
-     * position. */
+     *
+     * Bits 0 and 1: boot count modulo 4
+     * Bits 2 and 3: authorization scope
+     * Bits 4-6: reserved, set to zero
+     * Bit 7: indicate that the drone has deviated from its expected position.
+     */
     flags3 = _boot_count & 0x03;
+    flags3 |= (static_cast<uint8_t>(get_authorization_scope()) & 0x03) << 2;
     if (!_is_at_expected_position()) {
         flags3 |= (1 << 7);
     }
