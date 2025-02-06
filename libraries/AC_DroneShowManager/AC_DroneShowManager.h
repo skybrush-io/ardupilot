@@ -50,7 +50,7 @@ enum DroneShowControlModeFlag {
     DroneShowControl_AccelerationControlEnabled = 2,
 };
 
-// Enum representing the authorization types for the start of the show
+// Enum representing the authorization scopes for the start of the show
 enum DroneShowAuthorization : int8_t {
     // Show not authorized to start
     DroneShowAuthorization_Revoked = 0,
@@ -231,8 +231,8 @@ public:
         int32_t lat, int32_t lon, int32_t amsl_mm, float orientation_deg
     ) WARN_IF_UNUSED;
 
-    // Returns the current authorization type of the show
-    DroneShowAuthorization get_authorization_type() const;
+    // Returns the current authorization scope of the show
+    DroneShowAuthorization get_authorization_scope() const;
 
     // Returns the color of the LED light on the drone according to its light
     // program the given number of seconds after the start time.
@@ -573,7 +573,7 @@ private:
         // Orientation of drone show coordinate system, in degrees, as set in the parameters by the user
         AP_Float orientation_deg;
 
-        // Authorization type of the show; see the DroneShowAuthorization enum
+        // Authorization scope of the show; see the DroneShowAuthorization enum
         AP_Int8 authorization;
 
         // Whether the drone should boot in show mode, and whether we should enter show mode automatically when authorized

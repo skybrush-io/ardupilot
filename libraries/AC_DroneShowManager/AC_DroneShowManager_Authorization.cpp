@@ -1,6 +1,6 @@
 #include "AC_DroneShowManager.h"
 
-DroneShowAuthorization AC_DroneShowManager::get_authorization_type() const
+DroneShowAuthorization AC_DroneShowManager::get_authorization_scope() const
 {
     return static_cast<DroneShowAuthorization>(static_cast<int8_t>(_params.authorization));
 }
