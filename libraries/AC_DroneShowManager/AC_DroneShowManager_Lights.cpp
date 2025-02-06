@@ -425,6 +425,8 @@ void AC_DroneShowManager::_update_lights()
             // Authorized, far from start --> slow pulsating green light
             // Authorized, about to start --> green flashes, twice per second,
             // synced to GPS
+            // Authorized, but no permission to start the motors --> show color
+            // according to light program
 
             if (_stage_in_drone_show_mode == DroneShow_Error) {
                 color = Colors::RED;
@@ -441,10 +443,14 @@ void AC_DroneShowManager::_update_lights()
                     // if there is plenty of time until takeoff, we pulse slowly
                     color = Colors::GREEN_DIM;
                     pulse = 0.5;
-                } else {
+                } else if (has_authorization_to_start_motors()) {
                     // if we are about to take off soon, flash quickly
                     color = Colors::GREEN;
                     pattern = FLASH_TWICE_PER_SECOND;
+                } else {
+                    // authorized for lights, but not authorized to start
+                    // motors. Show the color according to the light program
+                    color = get_desired_color_of_rgb_light();
                 }
             } else {
                 color = Colors::LIGHT_BLUE;

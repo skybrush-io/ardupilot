@@ -180,6 +180,11 @@ void ModeDroneShow::run()
         error_run();
         break;
 
+    case DroneShow_TestingLights:
+        // testing light program without starting motors
+        light_testing_run();
+        break;
+
     default:
         break;
     }
@@ -194,7 +199,7 @@ void ModeDroneShow::check_changes_in_parameters()
     uint64_t current_start_time;
 
     current_start_time = copter.g2.drone_show_manager.get_start_time_epoch_undefined();
-    current_authorization = copter.g2.drone_show_manager.get_authorization_type();
+    current_authorization = copter.g2.drone_show_manager.get_authorization_scope();
 
     if (current_start_time != last_seen_start_time) {
         last_seen_start_time = current_start_time;
@@ -469,6 +474,15 @@ void ModeDroneShow::wait_for_start_time_run()
 
                 _motors_started = false;
             }
+
+            // If we are authorized to test the lights, check whether it is
+            // time to start the test
+            if (show_manager.get_authorization_scope() == DroneShowAuthorization_Granted_Lights_Only) {
+                float to_wait = show_manager.get_time_until_start_sec();
+                if (to_wait <= 0) {
+                    light_testing_start();
+                }
+            }
         }
     }
 }
@@ -584,6 +598,12 @@ void ModeDroneShow::takeoff_run()
                 landing_start();
                 break;
 
+            case DroneShow_TestingLights:
+                // light testing is done when landed so this is an erroneous
+                // configuration -- just land
+                landing_start();
+                break;
+
             default:
                 performing_start();
         }
@@ -662,7 +682,10 @@ bool ModeDroneShow::takeoff_completed() const
              */
             return wp_nav->reached_wp_destination() && takeoff_timed_out();
         }
-    } else if (_stage >= DroneShow_Performing && _stage <= DroneShow_Landed) {
+    } else if (
+        (_stage >= DroneShow_Performing && _stage <= DroneShow_Landed) ||
+        _stage == DroneShow_TestingLights
+    ) {
         return true;
     } else {
         return false;
@@ -902,6 +925,34 @@ void ModeDroneShow::error_run()
     if (AP::arming().is_armed()) {
         AP::arming().disarm(AP_Arming::Method::SCRIPTING);
     }
+}
+
+// starts the light testing phase on the ground
+void ModeDroneShow::light_testing_start()
+{
+    _set_stage(DroneShow_TestingLights);
+}
+
+// performs the light testing stage where we do nothing any more except waiting
+// for the light program to finish
+void ModeDroneShow::light_testing_run()
+{
+    // Ensure that we stay disarmed even if someone tries to arm us remotely
+    if (AP::arming().is_armed()) {
+        AP::arming().disarm(AP_Arming::Method::SCRIPTING);
+    }
+
+    if (!copter.g2.drone_show_manager.has_authorization()) {
+        initialization_start();
+    } else if (light_testing_completed()) {
+        landed_start();
+    }
+}
+
+// returns whether we should exit the light testing mode
+bool ModeDroneShow::light_testing_completed() const
+{
+    return copter.g2.drone_show_manager.get_time_until_landing_sec() <= 0;
 }
 
 // Handler function that is called when the authorization state of the show has

@@ -157,4 +157,8 @@ private:
 
     void error_start();
     void error_run();
+
+    void light_testing_start();
+    void light_testing_run();
+    bool light_testing_completed() const;
 };

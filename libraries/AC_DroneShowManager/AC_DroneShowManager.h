@@ -42,6 +42,7 @@ enum DroneShowModeStage {
     DroneShow_Landing,
     DroneShow_Landed,
     DroneShow_Error,
+    DroneShow_TestingLights,
 };
 
 // Enum representing the flags in the control mode bitmasp
