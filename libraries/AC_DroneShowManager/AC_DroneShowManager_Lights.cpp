@@ -36,9 +36,18 @@ static float get_modulation_factor_for_light_effect(
     uint32_t timestamp, LightEffectType effect, uint16_t period_msec, uint16_t phase_msec
 );
 
-void AC_DroneShowManager::get_color_of_rgb_light_at_seconds(float time, sb_rgb_color_t* color)
+sb_rgb_color_t AC_DroneShowManager::get_desired_color_of_rgb_light() {
+    float elapsed_time = get_elapsed_time_since_start_sec();
+    if (elapsed_time >= 0) {
+        return get_desired_color_of_rgb_light_at_seconds(elapsed_time);
+    } else {
+        return Colors::WHITE_DIM;
+    }
+}
+
+sb_rgb_color_t AC_DroneShowManager::get_desired_color_of_rgb_light_at_seconds(float time)
 {
-    *color = sb_light_player_get_color_at(_light_player, time < 0 || time > 86400000 ? 0 : time * 1000);
+    return sb_light_player_get_color_at(_light_player, time < 0 || time > 86400000 ? 0 : time * 1000);
 }
 
 uint32_t AC_DroneShowManager::_get_gps_synced_timestamp_in_millis_for_lights() const
@@ -359,12 +368,7 @@ void AC_DroneShowManager::_update_lights()
             } else if (_stage_in_drone_show_mode == DroneShow_Loiter) {
                 color = Colors::WHITE;
             } else {
-                elapsed_time = get_elapsed_time_since_start_sec();
-                if (elapsed_time >= 0) {
-                    get_color_of_rgb_light_at_seconds(elapsed_time, &color);
-                } else {
-                    color = Colors::WHITE_DIM;
-                }
+                color = get_desired_color_of_rgb_light();
             }
         } else {
             // Otherwise, show a bright white color so we can see the drone from the ground
@@ -385,7 +389,7 @@ void AC_DroneShowManager::_update_lights()
             // show has started already; otherwise blink green twice per second.
             elapsed_time = get_elapsed_time_since_start_sec();
             if (elapsed_time >= 0) {
-                get_color_of_rgb_light_at_seconds(elapsed_time, &color);
+                color = get_desired_color_of_rgb_light_at_seconds(elapsed_time);
                 light_signal_affected_by_brightness_setting = false;
             } else {
                 color = Colors::GREEN;
