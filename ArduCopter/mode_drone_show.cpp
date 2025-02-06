@@ -363,7 +363,8 @@ void ModeDroneShow::wait_for_start_time_start()
 // waits for the start time of the show
 void ModeDroneShow::wait_for_start_time_run()
 {
-    float time_until_takeoff_sec = copter.g2.drone_show_manager.get_time_until_takeoff_sec();
+    AC_DroneShowManager_Copter& show_manager = copter.g2.drone_show_manager;
+    float time_until_takeoff_sec = show_manager.get_time_until_takeoff_sec();
     float time_since_takeoff_sec = -time_until_takeoff_sec;
     const float latest_takeoff_attempt_after_scheduled_takeoff_time_in_seconds = 5.0f;
 
@@ -431,7 +432,7 @@ void ModeDroneShow::wait_for_start_time_run()
         }
 
         // Handle starting or stopping the motors depending on the authorization
-        if (copter.g2.drone_show_manager.has_authorization_to_start_motors()) {
+        if (show_manager.has_authorization_to_start_motors()) {
             if (time_until_takeoff_sec <= 8 && !_motors_started) {
                 // We attempt to start the motors 8 seconds before our takeoff time,
                 // and we keep on doing so until 5 seconds after the takeoff time, when
