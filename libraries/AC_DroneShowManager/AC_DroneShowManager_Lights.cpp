@@ -489,25 +489,33 @@ void AC_DroneShowManager::_update_lights()
 
     // Dim the lights if we are on the ground before the flight
     if (light_signal_affected_by_brightness_setting) {
-        uint8_t shift = 0;
+        if (brightness < 4) {
+            uint8_t shift;
 
-        if (brightness <= 0) {
-            // <= 0 = completely off, shift by 8 bits
-            shift = 8;
-        } else if (brightness == 1) {
-            // 1 = low brightness, keep the 6 MSB so the maximum is 64
-            shift = 2;
-        } else if (brightness == 2) {
-            // 2 = medium brightness, keep the 7 MSB so the maximum is 128
-            shift = 1;
+            if (brightness <= 0) {
+                // <= 0 = completely off, shift by 8 bits
+                shift = 8;
+            } else if (brightness == 1) {
+                // 1 = low brightness, keep the 6 MSB so the maximum is 64
+                shift = 2;
+            } else if (brightness == 2) {
+                // 2 = medium brightness, keep the 7 MSB so the maximum is 128
+                shift = 1;
+            } else {
+                // 3 = full brightness
+                shift = 0;
+            }
+
+            color.red >>= shift;
+            color.green >>= shift;
+            color.blue >>= shift;
         } else {
-            // >= 2 = full brightness
-            shift = 0;
+            // brightness is interpreted as a percentage
+            float brightness_scaler = brightness <= 100 ? brightness / 100.0f : 1.0f;
+            color.red = color.red * brightness_scaler;
+            color.green = color.green * brightness_scaler;
+            color.blue = color.blue * brightness_scaler;
         }
-
-        color.red >>= shift;
-        color.green >>= shift;
-        color.blue >>= shift;
     }
 
     _last_rgb_led_color = color;

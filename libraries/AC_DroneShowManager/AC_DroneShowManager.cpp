@@ -214,8 +214,8 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
 
     // @Param: PRE_LIGHTS
     // @DisplayName: Brightness of preflight check related lights
-    // @Description: Controls the brightness of light signals on the drone that are used to report status information when the drone is on the ground
-    // @Range: 0 3
+    // @Description: Controls the brightness of light signals on the drone that are used to report status information when the drone is on the ground. 0 is off, 1 is low brightness (25%), 2 is medium brightness (50%), 3 is full brightness (100%). Values greater than 3 and less than or equal to 100 are interpreted as percentages. Negative values are treated as zero.
+    // @Range: 0 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("PRE_LIGHTS", 10, AC_DroneShowManager, _params.preflight_light_signal_brightness, 2),
