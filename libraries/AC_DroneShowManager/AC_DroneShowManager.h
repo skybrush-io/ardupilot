@@ -9,7 +9,9 @@
 #include <AP_Notify/RGBLed.h>
 #include <AP_Param/AP_Param.h>
 
+#include <AC_BubbleFence/AC_BubbleFence.h>
 #include <AC_HardFence/AC_HardFence.h>
+#include <AC_Fence/AC_Fence.h>
 #include <AC_WPNav/AC_WPNav.h>
 
 #include <skybrush/colors.h>
@@ -298,6 +300,9 @@ public:
     // the function is guaranteed never to return PostAction_RTLOrLand
     PostAction get_action_at_end_of_show() const;
 
+    // Returns the action to be performed by the bubble fence module
+    AC_BubbleFence::FenceAction get_bubble_fence_action();
+
     // Retrieves the position where the drone is supposed to be at the start of the show.
     // Returns true if successful or false if the show coordinate system was not set up
     // by the user yet.
@@ -534,8 +539,11 @@ public:
     // Returns whether the manager uses GPS time to start the show
     bool uses_gps_time_for_show_start() const { return _params.time_sync_mode == TimeSyncMode_GPS; }
 
-    // Writes the log message specific to the drone show manager subsystem into the logs
-    void write_log_message() const;
+    // Writes a message containing a summary of the gefence status into the logs
+    void write_fence_status_log_message() const;
+
+    // Writes a message holding the status of the drone show subsystem into the logs
+    void write_show_status_log_message() const;
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -544,6 +552,9 @@ public:
     // ourselves to the SHOW_ parameter group only, and that one is managed by
     // AC_DroneShowManager.
     AC_HardFence hard_fence;
+
+    // Bubble fence subsystem. See also the comment for the hard fence.
+    AC_BubbleFence bubble_fence;
 
     // Takeoff acceleration; we assume that the drone attempts to take off with
     // this vertical acceleration if WPNAV_ACCEL_Z seems invalid

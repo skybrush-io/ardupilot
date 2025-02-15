@@ -68,6 +68,12 @@
 // Distance threshold for the trajectory to be considered circular, in meters.
 #define DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS 0.5f
 
+// Default horizontal bubble fence drift tolerance level, in meters.
+#define DEFAULT_BUBBLE_FENCE_MAX_XY_DRIFT_METERS 10.0f
+
+// Default vertical bubble fence drift tolerance level, in meters.
+#define DEFAULT_BUBBLE_FENCE_MAX_Z_DRIFT_METERS 10.0f
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 // UDP port that the drone show manager uses to broadcast the status of the RGB light
 // when compiled with the SITL simulator. Uncomment if you need it.
@@ -322,7 +328,45 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("POST_ACTION", 26, AC_DroneShowManager, _params.post_action, DEFAULT_POST_ACTION),
 
-    // Currently used max parameter ID: 26; update this if you add more parameters.
+    // @Param: BFENCE_EN
+    // @DisplayName: Bubble fence enable/disable
+    // @Description: Allows you to enable (1) or disable (0) the bubble fence functionality
+    // @Values: 0:Disabled,1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("BFENCE_EN", 27, AC_DroneShowManager, bubble_fence._params.enabled, 1),
+
+    // @Param: BFENCE_DXY
+    // @DisplayName: Bubble fence XY distance
+    // @Description: Maximum allowed deviation from the flight path in the XY plane. Set to zero to disable XY checks.
+    // @Units: m
+    // @Range: 0 1000
+    // @User: Standard
+    AP_GROUPINFO("BFENCE_DXY", 28, AC_DroneShowManager, bubble_fence._params.distance_xy, DEFAULT_BUBBLE_FENCE_MAX_XY_DRIFT_METERS),
+
+    // @Param: BFENCE_DZ
+    // @DisplayName: Bubble fence Z distance
+    // @Description: Maximum allowed deviation from the flight path along the Z axis. Set to zero to disable Z checks.
+    // @Units: m
+    // @Range: 0 1000
+    // @User: Standard
+    AP_GROUPINFO("BFENCE_DZ", 29, AC_DroneShowManager, bubble_fence._params.distance_z, DEFAULT_BUBBLE_FENCE_MAX_Z_DRIFT_METERS),
+
+    // @Param: BFENCE_TO
+    // @DisplayName: Bubble fence timeout
+    // @Description: Minimum time that the bubble fence needs to be breached to trigger the associated action
+    // @Units: sec
+    // @Range: 0 120
+    // @User: Standard
+    AP_GROUPINFO("BFENCE_TO", 30, AC_DroneShowManager, bubble_fence._params.timeout, 5),
+
+    // @Param: BFENCE_ACT
+    // @DisplayName: Bubble fence action
+    // @Description: Action to take when the bubble fence is breached beyond the timeout
+    // @Values: 0:None, 1:Report only, 2:Flash lights, 3:RTL, 4:Land, 5:Disarm
+    // @User: Standard
+    AP_GROUPINFO("BFENCE_ACT", 31, AC_DroneShowManager, bubble_fence._params.action, 1),
+
+    // Currently used max parameter ID: 31; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
@@ -445,6 +489,10 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     _open_rgb_led_socket();
 #endif
     _update_rgb_led_instance();
+
+    // initialise safety features
+    hard_fence.init();
+    bubble_fence.init();
 }
 
 
@@ -493,6 +541,23 @@ bool AC_DroneShowManager::configure_show_coordinate_system(
     }
 
     return true;
+}
+
+AC_BubbleFence::FenceAction AC_DroneShowManager::get_bubble_fence_action()
+{
+    Vector3f dist;
+    AC_BubbleFence::FenceAction action;
+
+    // Check the distance from the desired position during the performance
+    // only, not in any of the other stages
+    if (get_stage_in_drone_show_mode() == DroneShow_Performing) {
+        get_distance_from_desired_position(dist);
+        action = bubble_fence.notify_distance_from_desired_position(dist);
+    } else {
+        action = AC_BubbleFence::FenceAction::NONE;
+    }
+
+    return action;
 }
 
 bool AC_DroneShowManager::get_current_guided_mode_command_to_send(

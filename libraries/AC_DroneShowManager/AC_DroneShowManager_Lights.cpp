@@ -342,6 +342,11 @@ void AC_DroneShowManager::_update_lights()
         // reviewed regularly to see if these are still applicable.
         color = Colors::RED;
         pattern = BLINK;
+    } else if (bubble_fence.is_breached() && bubble_fence.should_flash_leds()) {
+        // If the drone is outside the bubble fence, flash red, full brightness
+        light_signal_affected_by_brightness_setting = false;
+        color = Colors::RED;
+        pattern = FLASH_FOUR_TIMES_PER_SECOND;
     } else if (AP_Notify::flags.flying) {
         uint32_t mode = gcs().custom_mode();
 

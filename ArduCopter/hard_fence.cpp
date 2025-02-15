@@ -4,8 +4,8 @@
 
 #if AP_FENCE_ENABLED && MODE_DRONE_SHOW_ENABLED == ENABLED
 
-// hard_fence_check - ask hard fence library to check whether the fence has been
-// breached for long enough to warrant a motor shutdown
+// hard_fence_check - inform the hard fence library about the active breaches
+// and take action if needed
 void Copter::hard_fence_check()
 {
     static uint32_t last_breach_notification_sent = 0;

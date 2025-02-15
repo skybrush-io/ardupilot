@@ -26,6 +26,7 @@ def build(bld):
         ap_vehicle=vehicle,
         ap_libraries=bld.ap_common_vehicle_libraries() + [
             'AC_AttitudeControl',
+            'AC_BubbleFence',
             'AC_DroneShowManager',
             'AC_HardFence',
             'AC_InputManager',

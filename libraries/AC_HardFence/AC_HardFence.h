@@ -33,6 +33,9 @@ public:
     // Initializes the hard geofence module at boot time
     void init();
 
+    // Returns the current breach state of the hard fence
+    BreachState get_breach_state() const { return _state; }
+
     // Notifies the hard geofence about the current set of breaches from the
     // fence module. Should be updated whenever the fence module of the vehicle
     // checked for breaches. The parameter is a bit field where each bit belongs
