@@ -76,5 +76,10 @@ bool DroneShowLED_Servo::set_raw_rgbw(uint8_t red, uint8_t green, uint8_t blue, 
 
 static uint16_t get_duty_cycle_for_color(const uint8_t color, const uint16_t usec_period)
 {
-    return usec_period * color / 255;
+    uint16_t result = usec_period * color / 255;
+    /* We canot use zero duty cycle because some LED drivers treat this as
+     * "no PWM signal". Since LEDs do not tend to turn on at low duty cycles
+     * we can safely use a pulse length of 1 usec instead of 0 usec if we want
+     * the LED to be off */
+    return result > 1 ? result : 1;
 }
