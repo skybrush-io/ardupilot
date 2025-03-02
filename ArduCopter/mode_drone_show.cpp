@@ -551,6 +551,14 @@ void ModeDroneShow::takeoff_start()
     // set yaw target to initial bearing where we were armed. Note that the yaw
     // input of the pilot will override this in auto_takeoff.run() if an RC is
     // connected and pilot yaw input in guided mode is allowed.
+    //
+    // Note the order of function calls here due to how AutoYaw::set_fixed_yaw()
+    // is structured as of ArduCopter 4.5. If we use absolute angles, the routine
+    // will start from the current yaw angle in the AutoYaw instance (which could
+    // be zero if it was never used) and slowly slew to the desired angle. We
+    // force the current yaw angle to be initialized by also calling
+    // set_yaw_angle_rate(), which seems to set the internal yaw angle immediately
+    auto_yaw.set_yaw_angle_rate(get_default_yaw_cd() * 0.01f, 0);
     auto_yaw.set_fixed_yaw(
         get_default_yaw_cd() * 0.01f,  /* [cd] -> [deg] */
         /* turn_rate_dps = */ 0, /* direction = */ 0, /* relative_angle = */ 0
