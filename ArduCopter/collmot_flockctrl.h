@@ -24,6 +24,16 @@ public:
         return isOptionSet(Options::AllowGuidedContinueWithoutGCSAndRC);
     }
 
+    // Returns whether we prevent resetting the yaw mode to the default
+    // WP_YAW_BEHAVIOUR in guided mode when a guided mode command is set
+    // without specifying yaw or yaw rate
+    //
+    // Note the double negation in the body -- this is intentional and needed
+    // for backward compatibility
+    bool shouldResetToDefaultYawModeInGuidedMode() {
+        return !isOptionSet(Options::DoNotResetGuidedYawModeToDefault);
+    }
+
 private:
 
     // Enum specifying the meaning of individual bits in the CM_FLOCK_OPTS
@@ -31,6 +41,7 @@ private:
     enum class Options : int32_t {
         All = (1 << 0U),
         AllowGuidedContinueWithoutGCSAndRC = (1 << 1U),
+        DoNotResetGuidedYawModeToDefault = (1 << 2U)
     };
 
     // Placeholder for the value of the CM_FLOCK_OPTS parameter
