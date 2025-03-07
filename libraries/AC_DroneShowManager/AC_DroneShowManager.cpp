@@ -1238,10 +1238,28 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
     packet[9] = flags3;
     memcpy(packet + 10, &encoded_elapsed_time, sizeof(encoded_elapsed_time));
 
+    // MAVLink channel RTCM stats. MAVLink channel 0 is the USB port and we
+    // do not really care about that, so we start from 1 (which is TELEM1) and
+    // also send the status of channel 2 (which is TELEM2).
+    for (uint8_t i = 1; i <= 2; i++) {
+        GCS_MAVLINK* gcs_chan;
+        int16_t count;
+
+        gcs_chan = gcs().chan(MAVLINK_COMM_0 + i);
+        count = gcs_chan ? gcs_chan->rtcm_message_counter().get_count() : -1;
+
+        // count == -1 means that we have never seen an RTCM message on
+        // this channel. However, for backward compatibility reasons we
+        // need to ensure that the packet can always be safely padded with
+        // zero bytes, therefore we need to post the count that we receive
+        // plus one -- hence the convoluted expression below.
+        packet[11 + i] = count < 0 ? 0 : ((count > 254 ? 254 : count) + 1);
+    }
+
     mavlink_msg_data16_send(
         chan,
         0x5b,   // Skybrush status packet type marker
-        12,     // effective packet length
+        14,     // effective packet length
         packet
     );
 }

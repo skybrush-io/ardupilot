@@ -559,7 +559,7 @@ public:
     }
 
     // handle possibly fragmented RTCM injection data
-    void handle_gps_rtcm_fragment(uint8_t flags, const uint8_t *data, uint8_t len);
+    void handle_gps_rtcm_fragment(mavlink_channel_t chan, uint8_t flags, const uint8_t *data, uint8_t len);
 
     // get configured type by instance
     GPS_Type get_type(uint8_t instance) const {
@@ -733,7 +733,7 @@ private:
 
     // re-assemble GPS_RTCM_DATA message
     void handle_gps_rtcm_data(mavlink_channel_t chan, const mavlink_message_t &msg);
-    void handle_gps_inject(const mavlink_message_t &msg);
+    void handle_gps_inject(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     //Inject a packet of raw binary to a GPS
     void inject_data(const uint8_t *data, uint16_t len);
