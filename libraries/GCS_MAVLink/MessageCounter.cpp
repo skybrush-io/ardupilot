@@ -23,29 +23,57 @@
 
 static uint32_t get_timestamp_in_seconds();
 
-MessageCounter::MessageCounter() : _sum(0), _hadMessage(false), _lastIndex(0) {
-    for (uint8_t i = 0; i < WINDOW_SIZE; i++) {
-        _messages[i] = 0;
-    }
+MessageCounter::MessageCounter() : _sum(0), _had_message(false), _last_updated_at(0), _last_index(0) {
+    _clear();
 }
 
-int16_t MessageCounter::get_count() const {
-    return _hadMessage ? (_sum > 32767 ? 32767 : _sum) : -1;
+int16_t MessageCounter::get_count() {
+    if (!_had_message) {
+        return -1;
+    }
+    
+    if (_sum > 0) {
+        _flush_counters();
+    }
+
+    return _sum > 32767 ? 32767 : _sum;
 }
 
 void MessageCounter::notify() {
-    uint8_t index = get_timestamp_in_seconds() % WINDOW_SIZE;
+    _flush_counters();
 
-    while (_lastIndex != index) {
-        _lastIndex = (_lastIndex + 1) % WINDOW_SIZE;
-        _sum -= _messages[_lastIndex];
-        _messages[_lastIndex] = 0;
-    }
-
-    _messages[index]++;
+    _messages[_last_index]++;
     _sum++;
 
-    _hadMessage = true;
+    _had_message = true;
+}
+
+void MessageCounter::_clear()
+{
+    for (uint8_t i = 0; i < WINDOW_SIZE; i++) {
+        _messages[i] = 0;
+    }
+    _last_index = 0;
+    _sum = 0;
+}
+
+void MessageCounter::_flush_counters()
+{
+    uint32_t now = get_timestamp_in_seconds();
+    uint32_t diff = now - _last_updated_at;
+
+    if (diff >= WINDOW_SIZE) {
+        _clear();
+    } else {
+        while (diff > 0) {
+            _last_index = (_last_index + 1) % WINDOW_SIZE;
+            _sum -= _messages[_last_index];
+            _messages[_last_index] = 0;
+            diff--;
+        }
+    }
+
+    _last_updated_at = now;
 }
 
 /// @brief Retrieves the current timestamp in seconds

@@ -38,7 +38,7 @@ public:
      *         have been received ever. This allows us to distinguish between
      *         no messages received and no messages received _recently_.
      */
-    int16_t get_count() const;
+    int16_t get_count();
 
 private:
     /// @brief The size of the time window being monitored
@@ -51,8 +51,14 @@ private:
     uint16_t _sum;
 
     /// @brief Stores whether at least one event has been logged.
-    bool _hadMessage;
+    bool _had_message;
+
+    /// @brief Timestamp when the counters were updated for the last time.
+    uint32_t _last_updated_at;
 
     /// @brief Index of the last cell that was written to in _messages.
-    uint8_t _lastIndex;
+    uint8_t _last_index;
+
+    void _clear();
+    void _flush_counters();
 };
