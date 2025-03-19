@@ -385,8 +385,8 @@ public:
 
     // See WS2812B spec for expected pulse widths
     static constexpr uint32_t NEOP_BIT_WIDTH_TICKS = 8;
-    static constexpr uint32_t NEOP_BIT_0_TICKS = 3;
-    static constexpr uint32_t NEOP_BIT_1_TICKS = 6;
+    static constexpr uint32_t NEOP_BIT_0_TICKS = 2; // bit pulse width for WS2811
+    static constexpr uint32_t NEOP_BIT_1_TICKS = 4; // bit pulse width for WS2811
     // neopixel does not use pulse widths at all
     static constexpr uint32_t PROFI_BIT_0_TICKS = 7;
     static constexpr uint32_t PROFI_BIT_1_TICKS = 14;
