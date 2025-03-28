@@ -800,6 +800,10 @@ private:
         ShowCoordinateSystem& coordinate_system
     ) const;
 
+    // Creates the directory in which the drone show specific files are stored
+    // on the filesystem
+    bool _create_show_directory();
+
     // Produces an internally triggered light signal that indicates a failed
     // operation (like a successful compass calibration)
     void _flash_leds_after_failure();
