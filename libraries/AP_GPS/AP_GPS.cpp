@@ -1752,6 +1752,14 @@ bool AP_GPS::parse_rtcm_injection(mavlink_channel_t chan, const mavlink_gps_rtcm
             const uint8_t *buf = nullptr;
             uint16_t len = rtcm.parsers[chan]->get_len(buf);
 
+            if (buf != nullptr && len > 0) {
+                // log that we have a full message from this channel
+                GCS_MAVLINK* gcs_chan = gcs().chan(chan);
+                if (gcs_chan != nullptr) {
+                    gcs_chan->rtcm_message_counter().notify();
+                }
+            }
+
             // see if we have already sent it. This prevents
             // duplicates from multiple sources
             const uint32_t crc = crc_crc32(0, buf, len);
@@ -1781,11 +1789,6 @@ bool AP_GPS::parse_rtcm_injection(mavlink_channel_t chan, const mavlink_gps_rtcm
 
             if (buf != nullptr && len > 0) {
                 inject_data(buf, len);
-
-                GCS_MAVLINK* gcs_chan = gcs().chan(chan);
-                if (gcs_chan != nullptr) {
-                    gcs_chan->rtcm_message_counter().notify();
-                }
             }
             rtcm.parsers[chan]->reset();
         }
