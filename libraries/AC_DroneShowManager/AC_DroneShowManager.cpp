@@ -146,7 +146,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
 
     // @Param: LED0_MINBRI
     // @DisplayName: Minimum LED brightness threshold
-    // @Description: Minimum brightness threshold (as a ratio 0-1) below which LED is turned off completely
+    // @Description: Minimum brightness threshold (as a ratio 0.0-1.0) below which LED is turned off completely
     // @Range: 0 1
     // @Increment: 0.01
     // @User: Advanced
