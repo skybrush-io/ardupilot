@@ -21,7 +21,7 @@ DroneShowLEDFactory::DroneShowLEDFactory()
 }
 
 DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
-    DroneShowLEDType type, uint8_t channel, uint8_t num_leds
+    DroneShowLEDType type, uint8_t channel, uint8_t num_leds, float min_brightness
 ) {
     uint8_t chan_red, chan_green, chan_blue, chan_white;
     DroneShowLED* result = NULL;
@@ -96,6 +96,11 @@ DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
         // Initialization failed
         delete result;
         result = NULL;
+    }
+
+    // Set the minimum brightness if we created a valid LED
+    if (result) {
+        result->set_min_brightness(min_brightness);
     }
 
     return result;

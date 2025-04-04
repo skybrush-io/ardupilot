@@ -15,6 +15,11 @@ private:
     float _gamma;
 
     /**
+     * Current minimum brightness threshold of the LED.
+     */
+    float _min_brightness;
+
+    /**
      * Gamma correction lookup table that maps uncorrected RGB components to
      * gamma-corrected values.
      */
@@ -37,7 +42,7 @@ private:
 
 public:
     DroneShowLED() :
-        _gamma(0.0f), _last_red(0), _last_green(0), _last_blue(0), _last_white(0),
+        _gamma(0.0f), _min_brightness(0.0f), _last_red(0), _last_green(0), _last_blue(0), _last_white(0),
         _repeat_count(0), _repeat_count_left(0)
     {
         set_gamma(1.0f);
@@ -65,7 +70,14 @@ public:
     }
 
     /**
-     * Sers the repeat count of the LED, i.e. the number of times a color setting
+     * Sets the minimum brightness threshold of the LED.
+     */
+    void set_min_brightness(float value) {
+        _min_brightness = value;
+    }
+
+    /**
+     * Sets the repeat count of the LED, i.e. the number of times a color setting
      * command should be repeated.
      */
     void set_repeat_count(uint8_t value) {
@@ -98,6 +110,14 @@ public:
      * its own.
      */
     void set_rgbw(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
+        // Calculate overall brightness as maximum of all channels
+        float max_brightness = static_cast<float>(MAX(MAX(red, green), MAX(blue, white))) / 255.0f;
+
+        // If overall brightness is below threshold, turn off all channels
+        if (max_brightness < _min_brightness) {
+            red = green = blue = white = 0;
+        }
+
         if (red != _last_red || green != _last_green || blue != _last_blue || white != _last_white) {
             _last_red = red;
             _last_green = green;
