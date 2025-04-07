@@ -38,7 +38,7 @@
 #define DEFAULT_MAX_Z_DRIFT_METERS 3.0f
 
 // Default action to take when the show trajectory ends
-#define DEFAULT_POST_ACTION PostAction_RTLOrLand
+#define DEFAULT_POST_ACTION PostAction_Land
 
 // Distance threshold for the trajectory to be considered circular, in meters.
 #define DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS 0.5f
