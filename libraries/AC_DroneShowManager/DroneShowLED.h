@@ -15,9 +15,14 @@ private:
     float _gamma;
 
     /**
-     * Current minimum brightness threshold of the LED.
+     * Current minimum brightness threshold of the LED as a fractional number.
      */
     float _min_brightness;
+
+    /**
+     * Current minimum brightness threshold of the LED, scaled to the 0-255 range.
+     */
+    uint8_t _min_brightness_scaled;
 
     /**
      * Gamma correction lookup table that maps uncorrected RGB components to
@@ -74,6 +79,7 @@ public:
      */
     void set_min_brightness(float value) {
         _min_brightness = value;
+        _min_brightness_scaled = value < 0 ? 0 : value < 1 ? static_cast<uint8_t>(value * 255.0f) : 255;
     }
 
     /**
@@ -110,14 +116,6 @@ public:
      * its own.
      */
     void set_rgbw(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
-        // Calculate overall brightness as maximum of all channels
-        float max_brightness = static_cast<float>(MAX(MAX(red, green), MAX(blue, white))) / 255.0f;
-
-        // If overall brightness is below threshold, turn off all channels
-        if (max_brightness < _min_brightness) {
-            red = green = blue = white = 0;
-        }
-
         if (red != _last_red || green != _last_green || blue != _last_blue || white != _last_white) {
             _last_red = red;
             _last_green = green;
@@ -141,16 +139,29 @@ public:
      * Repeats the last command to set the color of the RGB LED if needed.
      */
     void repeat_last_command_if_needed() {
+        uint8_t red, green, blue, white;
+
         if (_repeat_count_left == 0) {
             return;
         }
 
-        if (set_raw_rgbw(
-            _gamma_lookup_table[_last_red],
-            _gamma_lookup_table[_last_green],
-            _gamma_lookup_table[_last_blue],
-            _gamma_lookup_table[_last_white]
-        )) {
+        // Calculate overall brightness as maximum of all channels
+        uint8_t max_brightness = std::max(
+            std::max(_last_red, _last_green),
+            std::max(_last_blue, _last_white)
+        );
+
+        // If overall brightness is below threshold, turn off all channels
+        if (max_brightness < _min_brightness_scaled) {
+            red = green = blue = white = 0;
+        } else {
+            red = _last_red;
+            green = _last_green;
+            blue = _last_blue;
+            white = _last_white;
+        }
+
+        if (set_raw_rgbw(red, green, blue, white)) {
             _repeat_count_left--;
         }
     }
