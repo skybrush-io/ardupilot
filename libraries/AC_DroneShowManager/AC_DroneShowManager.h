@@ -639,6 +639,9 @@ private:
 
             // Color temperature of the white LED when the LED light channel uses an extra white LED
             AP_Float white_temperature;
+
+            // Minimum brightness threshold (as a ratio 0-1) below which LED is turned off
+            AP_Float min_brightness;
         } led_specs[1];
 
         // Action to take at the end of the show

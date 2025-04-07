@@ -578,6 +578,7 @@ void AC_DroneShowManager::_update_rgb_led_instance()
         int led_type = _params.led_specs[0].type;
         uint8_t channel = _params.led_specs[0].channel;
         uint8_t num_leds = _params.led_specs[0].count;
+        float min_brightness = _params.led_specs[0].min_brightness;
 
         if (
             led_type != previous_led_type ||
@@ -595,13 +596,16 @@ void AC_DroneShowManager::_update_rgb_led_instance()
 
             // Construct the new LED
             _rgb_led = _rgb_led_factory->new_rgb_led_by_type(
-                static_cast<DroneShowLEDType>(led_type), channel, num_leds
+                static_cast<DroneShowLEDType>(led_type), channel, num_leds, min_brightness
             );
 
             // Store the settings
             previous_led_type = led_type;
             previous_channel = channel;
             previous_num_leds = num_leds;
+        } else if (_rgb_led) {
+            // Update minimum brightness if LED exists
+            _rgb_led->set_min_brightness(min_brightness);
         }
     }
 

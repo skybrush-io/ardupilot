@@ -144,6 +144,14 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("LED0_WTEMP", 23, AC_DroneShowManager, _params.led_specs[0].white_temperature, 0.0f),
 
+    // @Param: LED0_MINBRI
+    // @DisplayName: Minimum LED brightness threshold
+    // @Description: Minimum brightness threshold (as a ratio 0.0-1.0) below which LED is turned off completely
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @User: Advanced
+    AP_GROUPINFO("LED0_MINBRI", 32, AC_DroneShowManager, _params.led_specs[0].min_brightness, 0.0f),
+
     // @Param: MODE_BOOT
     // @DisplayName: Conditions for entering show mode
     // @Description: Bitfield that specifies when the drone should switch to show mode automatically
@@ -306,7 +314,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("BFENCE_ACT", 31, AC_DroneShowManager, bubble_fence._params.action, 1),
 
-    // Currently used max parameter ID: 31; update this if you add more parameters.
+    // Currently used max parameter ID: 32; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
