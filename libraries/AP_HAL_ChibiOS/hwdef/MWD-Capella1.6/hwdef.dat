@@ -206,3 +206,6 @@ define HAL_WITH_RAMTRON 1
 
 DMA_PRIORITY SPI1* SPI2* ADC* TIM* USART2* USART1* UART8*
 DMA_NOSHARE  SPI1* SPI2* SPI3* TIM*UP*
+
+# Enable firmware updates from SD card
+env BUILD_ABIN True
