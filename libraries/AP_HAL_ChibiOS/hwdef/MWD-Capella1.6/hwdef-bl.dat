@@ -1,0 +1,60 @@
+# Milky Way Drones - Capella v1.6
+# hw definition file for processing by chibios_hwdef.py
+
+# MCU class and specific type
+MCU STM32H7xx STM32H743xx
+
+# crystal frequency
+OSCILLATOR_HZ 16000000
+
+# board ID for firmware load
+APJ_BOARD_ID 1199
+
+FLASH_SIZE_KB 2048
+
+# bootloader is installed at zero offset
+FLASH_RESERVE_START_KB 0
+
+# the location where the bootloader will put the firmware
+# the H743 has 128k sectors
+FLASH_BOOTLOADER_LOAD_KB 128
+
+# ChibiOS system timer
+STM32_ST_USE_TIMER 5
+
+#define LED pins
+PE10 LED_RED OUTPUT OPENDRAIN HIGH # red
+PE4 LED_ACTIVITY OUTPUT OPENDRAIN HIGH # green
+PE3 LED_BOOTLOADER OUTPUT OPENDRAIN HIGH # blue
+
+define HAL_LED_ON 0
+
+# order of UARTs (and USB)
+SERIAL_ORDER OTG1 UART7
+
+# UART7 is Debug
+PE7 UART7_RX UART7 NODMA
+PE8 UART7_TX UART7 NODMA
+
+PA11 OTG_FS_DM OTG1
+PA12 OTG_FS_DP OTG1
+PA8  VBUS INPUT
+
+PB12 VDD_3V3_SENSORS_EN OUTPUT LOW
+PD14 VDD_3V3_SD_CARD_EN OUTPUT LOW
+PD15 VDD_5V_PERIPH_EN OUTPUT LOW
+
+PB13 SKYBRUSH_FC_POWER_QUERY_PIN OUTPUT LOW
+PC13 SKYBRUSH_FC_LIGHT_PIN OUTPUT LOW
+PE15 FAN_CONTROL OUTPUT LOW 
+
+PA13 JTMS-SWDIO SWD
+PA14 JTCK-SWCLK SWD
+
+# Add CS pins to ensure they are high in bootloader
+PA15 	IMU1_CS     CS
+PD4 	IMU1_CS2	CS
+PA10	FRAM_CS		CS SPEED_VERYLOW
+PD7 	IMU2_CS     CS
+PB9 	DPS310_CS	CS
+PB8 	RM3100_CS	CS
