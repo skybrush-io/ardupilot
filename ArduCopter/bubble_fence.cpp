@@ -52,14 +52,7 @@ void Copter::bubble_fence_check()
 
         case AC_BubbleFence::FenceAction::DISARM:
             send_breach_notification_if_needed("disarming");
-
-            // Try to disarm the motors forcibly via the AP_Arming module
-            if (!AP::arming().disarm(AP_Arming::Method::FENCEBREACH, /* do_disarm_checks = */ false)) {
-                // AP_Arming module refused to disarm. There must be a reason for this,
-                // but the bubble fence overrides everything, so we talk directly to the
-                // motors instead
-                motors->armed(false);
-            }
+            force_disarm_without_questions(AP_Arming::Method::FENCEBREACH);
             break;
 
         default:

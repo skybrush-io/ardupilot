@@ -32,13 +32,7 @@ void Copter::hard_fence_check()
             last_breach_notification_sent = AP_HAL::millis();
         }
 
-        // Try to disarm the motors forcibly via the AP_Arming module
-        if (!AP::arming().disarm(AP_Arming::Method::FENCEBREACH, /* do_disarm_checks = */ false)) {
-            // AP_Arming module refused to disarm. There must be a reason for this,
-            // but the hard fence overrides everything, so we talk directly to the
-            // motors instead
-            motors->armed(false);
-        }
+        force_disarm_without_questions(AP_Arming::Method::FENCEBREACH);
     }
 }
 

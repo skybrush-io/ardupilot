@@ -1096,6 +1096,9 @@ private:
     Mode *mode_from_mode_num(const Mode::Number mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
 
+    // force_disarm.cpp
+    void force_disarm_without_questions(const AP_Arming::Method method);
+
 public:
     void failsafe_check();      // failsafe.cpp
 };
