@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Helper script to build ArduCopter for multiple FMUs
-# 
+#
 # Officially supported configurations:
 #
 # sitl -- Software-in-the-loop simulator
@@ -39,12 +39,14 @@ DIST_DIR=dist
 set -e
 
 # Declare that some of the boards are based on other boards so we can re-use
-# their bootloaders
+# their bootloaders. Note that we cannot re-use bootloaders in cases where
+# the base bootloader was not built with flash-from-SD support if we enabled
+# it by ourselves
 BASE_BOARD_OF_cmcopter=Pixhawk1
 BASE_BOARD_OF_entron300=Pixhawk1
 BASE_BOARD_OF_lightdynamix_pixel=MatekH743-bdshot
 
-cd "`dirname $0`"
+cd "$(dirname $0)"
 
 mkdir -p ${DIST_DIR}/
 
@@ -64,9 +66,12 @@ if [ ! -d "${ARM_TOOLCHAIN}" ]; then
     while true; do
         read -p "    Do you want to continue? [y/N] " yn
         case $yn in
-            [Yy]* ) break;;
-            [Nn]* ) exit;;
-            * ) echo ""; echo "    Please respond with yes or no.";;
+        [Yy]*) break ;;
+        [Nn]*) exit ;;
+        *)
+            echo ""
+            echo "    Please respond with yes or no."
+            ;;
         esac
     done
 fi
@@ -75,12 +80,12 @@ if [ -d "${ARM_TOOLCHAIN}" ]; then
     export PATH="${ARM_TOOLCHAIN}/bin:$PATH"
 fi
 
-DATE=`date +%Y%m%d`
+DATE=$(date +%Y%m%d)
 
 source .venv/bin/activate
 
 for BOARD in $BOARDS; do
-    BOARD_LOWER=`echo $BOARD | tr [[:upper:]] [[:lower:]]`
+    BOARD_LOWER=$(echo $BOARD | tr [[:upper:]] [[:lower:]])
 
     echo "Starting build for $BOARD..."
     echo ""
@@ -88,7 +93,7 @@ for BOARD in $BOARDS; do
     rm -rf build/$BOARD
 
     # If the board is based on another board, copy the bootloader
-    BASE_BOARD_VAR_NAME="BASE_BOARD_OF_`echo "${BOARD}" | sed -e 's/-/_/g'`"
+    BASE_BOARD_VAR_NAME="BASE_BOARD_OF_$(echo "${BOARD}" | sed -e 's/-/_/g')"
     BASE_BOARD=${!BASE_BOARD_VAR_NAME}
     if [ x$BASE_BOARD != x ]; then
         rm -f Tools/bootloaders/${BOARD}_bl.*
@@ -98,16 +103,24 @@ for BOARD in $BOARDS; do
         done
     fi
 
+    # If we have no bootloader yet, build from scratch
+    if [ ! -f Tools/bootloaders/${BOARD}_bl.bin ]; then
+        ./waf configure --board=$BOARD --bootloader
+        ./waf bootloader
+        cp build/$BOARD/bin/AP_Bootloader.bin Tools/bootloaders/${BOARD}_bl.bin
+    fi
+
     if [ x$BOARD = xcmcopter ]; then
         # The IOFMU code has to be rebuilt
-       ./waf configure --board=$BOARD
+        ./waf configure --board=$BOARD
         CXXFLAGS=-DCOLLMOT_HACKS_FRSKY_SHORTER_FINAL_PPMSUM_PULSE Tools/scripts/build_iofirmware.py
     else
         # Discard any changes made to the vendored IOFMU
         git restore Tools/IO_Firmware/*.bin
     fi
 
-    ./waf configure --board=$BOARD && ./waf copter
+    ./waf configure --board=$BOARD
+    ./waf copter
     if [ -f build/$BOARD/bin/arducopter.apj ]; then
         mkdir -p ${DIST_DIR}/${BOARD_LOWER}
         cp build/$BOARD/bin/arducopter.apj ${DIST_DIR}/${BOARD_LOWER}/arducopter-skybrush-${BOARD_LOWER}-$DATE.apj
@@ -115,6 +128,10 @@ for BOARD in $BOARDS; do
     if [ -f build/$BOARD/bin/arducopter_with_bl.hex ]; then
         mkdir -p ${DIST_DIR}/${BOARD_LOWER}
         cp build/$BOARD/bin/arducopter_with_bl.hex ${DIST_DIR}/${BOARD_LOWER}/arducopter-skybrush-${BOARD_LOWER}-$DATE.hex
+    fi
+    if [ -f build/$BOARD/bin/arducopter.abin ]; then
+        mkdir -p ${DIST_DIR}/${BOARD_LOWER}
+        cp build/$BOARD/bin/arducopter.abin ${DIST_DIR}/${BOARD_LOWER}/arducopter-skybrush-${BOARD_LOWER}-$DATE.abin
     fi
 
     if [ x$BOARD = xcmcopter ]; then
@@ -133,4 +150,3 @@ done
 
 echo ""
 echo "Compiled firmwares are in dist/"
-
