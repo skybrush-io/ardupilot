@@ -890,8 +890,6 @@ void ModeDroneShow::loiter_run()
 void ModeDroneShow::landed_start()
 {
     _set_stage(DroneShow_Landed);
-
-    copter.g2.drone_show_manager.notify_landed();
 }
 
 // performs the landed stage where we do nothing any more

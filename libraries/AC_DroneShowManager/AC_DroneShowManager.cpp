@@ -797,64 +797,6 @@ float AC_DroneShowManager::get_elapsed_time_since_start_sec() const
     return elapsed_usec == INT64_MIN ? -86400 : static_cast<float>(elapsed_usec / 1000) / 1000.0f;
 }
 
-PostAction AC_DroneShowManager::get_action_at_end_of_show() const
-{
-    switch (_params.post_action) {
-        case PostAction_Land:
-            return PostAction_Land;
-
-        case PostAction_Loiter:
-            return PostAction_Loiter;
-
-        case PostAction_RTL:
-            return PostAction_RTL;
-
-        case PostAction_RTLOrLand:
-            return (
-                _is_at_takeoff_position_xy(2 * DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS) &&
-                _trajectory_is_circular
-            ) ? PostAction_RTL : PostAction_Land;
-
-        default:
-            // Legacy behaviour when we did not have a parameter for the
-            // post-show action
-            return PostAction_Land;
-    }
-}
-
-bool AC_DroneShowManager::get_global_takeoff_position(Location& loc) const
-{
-    // This function may be called any time, not only during the show, so we
-    // need to take the parameters provided by the user, convert them into a
-    // ShowCoordinateSystem object, and then use that to get the GPS coordinates
-    sb_vector3_with_yaw_t vec;
-
-    if (!_tentative_show_coordinate_system.is_valid())
-    {
-        return false;
-    }
-
-    vec.x = _takeoff_position_mm.x;
-    vec.y = _takeoff_position_mm.y;
-    vec.z = _takeoff_position_mm.z;
-
-    _tentative_show_coordinate_system.convert_show_to_global_coordinate(vec, loc);
-
-    return true;
-}
-
-float AC_DroneShowManager::get_motor_spool_up_time_sec() const {
-    float value = 0.0f;
-
-    if (AP_Param::get("MOT_SPOOL_TIME", value)) {
-        if (value >= 0.0f) {
-            return value;
-        }
-    }
-
-    return DEFAULT_MOTOR_SPOOL_UP_TIME_SEC;
-}
-
 int64_t AC_DroneShowManager::get_time_until_start_usec() const
 {
     return -get_elapsed_time_since_start_usec();
@@ -863,11 +805,6 @@ int64_t AC_DroneShowManager::get_time_until_start_usec() const
 float AC_DroneShowManager::get_time_until_start_sec() const
 {
     return -get_elapsed_time_since_start_sec();
-}
-
-float AC_DroneShowManager::get_time_until_takeoff_sec() const
-{
-    return get_time_until_start_sec() + get_relative_takeoff_time_sec();
 }
 
 float AC_DroneShowManager::get_time_until_landing_sec() const
@@ -1003,6 +940,11 @@ void AC_DroneShowManager::notify_drone_show_mode_entered_stage(DroneShowModeStag
     // Force-update preflight checks so we see the errors immediately if we
     // switched to the "waiting for start time" stage
     _update_preflight_check_result(/* force = */ true);
+
+    // Call callbacks for certain stages
+    if (_stage_in_drone_show_mode == DroneShow_Landed) {
+        _handle_switch_to_landed_state();
+    }
 }
 
 void AC_DroneShowManager::notify_drone_show_mode_exited()
@@ -1016,27 +958,6 @@ void AC_DroneShowManager::notify_drone_show_mode_exited()
 void AC_DroneShowManager::notify_guided_mode_command_sent(const GuidedModeCommand& command)
 {
     _last_setpoint = command;   
-}
-
-void AC_DroneShowManager::notify_landed()
-{
-    _cancel_requested = false;
-
-    // Let's not clear the start time; there's not really much point but at
-    // least we don't confuse the GCS (not Skybrush but Mission Planner) with
-    // a parameter suddenly changing behind its back. This is just a theoretical
-    // possibility but let us be on the safe side.
-    // _clear_start_time_after_landing();
-}
-
-bool AC_DroneShowManager::notify_takeoff_attempt()
-{
-    if (!is_prepared_to_take_off())
-    {
-        return false;
-    }
-    
-    return _copy_show_coordinate_system_from_parameters_to(_show_coordinate_system);
 }
 
 void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) const
@@ -1376,13 +1297,6 @@ void AC_DroneShowManager::_check_radio_failsafe()
     }
 }
 
-void AC_DroneShowManager::_clear_start_time_after_landing()
-{
-    _params.start_time_gps_sec.set(-1);
-    _start_time_on_internal_clock_usec = 0;
-    _check_changes_in_parameters();
-}
-
 void AC_DroneShowManager::_clear_start_time_if_set_by_switch()
 {
     if (_start_time_requested_by == StartTimeSource::RC_SWITCH) {
@@ -1542,29 +1456,6 @@ bool AC_DroneShowManager::_is_at_expected_position() const
     );
 }
 
-bool AC_DroneShowManager::_is_at_takeoff_position_xy(float xy_threshold) const
-{
-    Location takeoff_loc;
-    
-    if (!_tentative_show_coordinate_system.is_valid())
-    {
-        // User did not set up the takeoff position yet
-        return false;
-    }
-
-    if (!get_global_takeoff_position(takeoff_loc))
-    {
-        // Show coordinate system not set up yet
-        return false;
-    }
-
-    return _is_close_to_position(
-        takeoff_loc,
-        xy_threshold > 0 ? xy_threshold : _params.max_xy_placement_error_m,
-        0
-    );
-}
-
 bool AC_DroneShowManager::_is_close_to_position(
     const Location& target_loc, float xy_threshold, float z_threshold
 ) const
@@ -1604,11 +1495,6 @@ bool AC_DroneShowManager::_is_gps_time_ok() const
     // that the GPS subsystem receives iTOW information from the GPS module but
     // no week number; we deem this unreliable so we return false in this case.
     return AP::gps().time_week() > 0;
-}
-
-bool AC_DroneShowManager::is_prepared_to_take_off() const
-{
-    return (!_preflight_check_failures && _is_gps_time_ok());
 }
 
 void AC_DroneShowManager::_update_preflight_check_result(bool force)
@@ -1656,6 +1542,12 @@ float AC_DroneShowManager::ShowCoordinateSystem::convert_show_to_global_yaw_and_
     // show coordinates are in degrees relative to X axis orientation,
     // we need centidegrees relative to North
     return (degrees(orientation_rad) + yaw) * 100.0f;
+}
+
+void AC_DroneShowManager::ShowCoordinateSystem::convert_global_to_show_coordinate(
+    const Location& loc, sb_vector3_with_yaw_t& vec
+) const {
+    // TODO(ntamas)
 }
 
 void AC_DroneShowManager::ShowCoordinateSystem::convert_show_to_global_coordinate(

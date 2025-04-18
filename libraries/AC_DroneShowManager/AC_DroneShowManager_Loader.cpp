@@ -99,8 +99,17 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
         stat_data.st_blksize = 4096;
     }
 
-    // Allocate memory for the whole content of the file
-    show_data = static_cast<uint8_t *>(calloc(stat_data.st_size, sizeof(uint8_t)));
+    // Allocate memory for the whole content of the file and a few extra bytes
+    // at the end to make sure that we have enough space to extend the trajectory
+    // with a smooth landing segment if needed.
+    //
+    // The landing segment will be a single cubic Bezier spline. In the worst
+    // case, we need X, Y and Z coordinates for two control points and the
+    // final point where the landing is triggered, plus the duration of the
+    // segment and a header byte. 2 bytes per coordinate, 3 coordinates per
+    // point, 3 points, plus 2 bytes for the duration and 1 byte for the header
+    // yields a total of 21 extra bytes. We allocate 32 to be on the safe side.
+    show_data = static_cast<uint8_t *>(calloc(stat_data.st_size + 32, sizeof(uint8_t)));
     if (show_data == 0)
     {
         hal.console->printf(
@@ -283,6 +292,12 @@ bool AC_DroneShowManager::_recalculate_trajectory_properties()
             stats.start_to_end_distance_xy <=
             DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS * 1000.0f /* [mm] */
         );
+
+        // Remember that we can modify the trajectory at takeoff to ensure
+        // precise landing back at the takeoff position. This will be done only
+        // if the trajectory is circular (i.e. we are meant to land at the
+        // same position).
+        _trajectory_modified_for_landing = false;
 
         // We need to takeoff earlier due to expected motor spool up time
         _takeoff_time_sec -= get_motor_spool_up_time_sec();

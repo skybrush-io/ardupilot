@@ -148,6 +148,10 @@ private:
         // Clears the show coordinate system, resetting the origin back to Null Island
         void clear();
 
+        // Converts a coordinate given in the global GPS coordinate system to
+        // the show coordinate system, in millimeters
+        void convert_global_to_show_coordinate(const Location& loc, sb_vector3_with_yaw_t& vec) const;
+
         // Converts a coordinate given in the show coordinate system, in millimeters, to
         // the global GPS coordinate system
         void convert_show_to_global_coordinate(sb_vector3_with_yaw_t vec, Location& loc) const;
@@ -481,9 +485,6 @@ public:
     // Notifies the drone show manager that a guided mode command was sent to the drone
     void notify_guided_mode_command_sent(const GuidedModeCommand& command);
 
-    // Notifies the drone show manager that the drone has landed after the show
-    void notify_landed();
-
     // Notifies the drone show manager that the takeoff is about to take place.
     // The drone show manager may decide to cancel the takeoff by returning false.
     bool notify_takeoff_attempt() WARN_IF_UNUSED;
@@ -740,6 +741,12 @@ private:
     // it started. This is used to determine whether the drone should land or
     // return to the takeoff position at the end of the show.
     bool _trajectory_is_circular;
+    
+    // Flag to indicate whether we have already modified the trajectory to
+    // ensure precision landing back to the exact takeoff position (even if the
+    // drone is slightly misplaced). This is used to avoid modifying the trajectory
+    // multiple times when the show is restarted.
+    bool _trajectory_modified_for_landing;
 
     // Flag that is set to true if the user has instructed the drone show manager
     // to cancel the show as soon as possible. This is checked regularly by
@@ -848,6 +855,9 @@ private:
 
     // Handles a MAVLink LED_CONTROL message from the ground station.
     bool _handle_led_control_message(const mavlink_message_t& msg);
+
+    // Callback that is called when entering the "landed" stage
+    void _handle_switch_to_landed_state();
 
     // Returns whether the drone is close enough to its expected position during a show.
     // Returns true unconditionally if the drone is not performing a show.
