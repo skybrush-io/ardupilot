@@ -105,9 +105,7 @@ for BOARD in $BOARDS; do
 
     # If we have no bootloader yet, build from scratch
     if [ ! -f Tools/bootloaders/${BOARD}_bl.bin ]; then
-        ./waf configure --board=$BOARD --bootloader
-        ./waf bootloader
-        cp build/$BOARD/bin/AP_Bootloader.bin Tools/bootloaders/${BOARD}_bl.bin
+        ./Tools/scripts/build_bootloaders.py ${BOARD}
     fi
 
     if [ x$BOARD = xcmcopter ]; then
