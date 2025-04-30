@@ -56,7 +56,7 @@ bool AP_SerialLED::set_num_profiled(uint8_t chan, uint8_t num_leds)
 bool AP_SerialLED::set_RGB(uint8_t chan, int8_t led, uint8_t red, uint8_t green, uint8_t blue)
 {
     if (chan >= 1 && chan <= 16) {
-        return hal.rcout->set_serial_led_rgb_data(chan-1, led, red, green, blue);
+        return hal.rcout->set_serial_led_rgb_data(chan-1, led, green, red, blue);
     }
     return false;
 }
