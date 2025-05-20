@@ -13,7 +13,8 @@ public:
     DroneShowLED_Servo(
         uint8_t red_channel, uint8_t green_channel,
         uint8_t blue_channel, uint8_t white_channel = 255,
-        bool inverted = false, bool use_servo_limits = false
+        bool inverted = false, bool use_servo_limits = false,
+        bool off_is_zero = false
     );
     ~DroneShowLED_Servo() {};
 
@@ -32,5 +33,11 @@ private:
     uint8_t _blue_channel;
     uint8_t _white_channel;
     bool _inverted;
-    bool _use_servo_limits;  // Whether to use servo min/max limits
+
+    // Whether to use servo min/max limits when determining the PWM pulse width
+    bool _use_servo_limits;
+
+    // Whether to treat R=0, G=0 or B=0 separately by using a zero-width pulse
+    // even if the limit is larger than zero
+    bool _off_is_zero;
 };

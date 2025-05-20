@@ -42,6 +42,7 @@ DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
         case DroneShowLEDType_Servo:
         case DroneShowLEDType_InvertedServo:
         case DroneShowLEDType_ServoWithLimits:
+        case DroneShowLEDType_ServoWithLimits_OffIsZero:
             if (
                 SRV_Channels::find_channel(SRV_Channel::k_scripting14, chan_red) &&
                 SRV_Channels::find_channel(SRV_Channel::k_scripting15, chan_green) &&
@@ -53,7 +54,9 @@ DroneShowLED* DroneShowLEDFactory::new_rgb_led_by_type(
                 result = new DroneShowLED_Servo(
                     chan_red, chan_green, chan_blue, chan_white,
                     type == DroneShowLEDType_InvertedServo,
-                    type == DroneShowLEDType_ServoWithLimits
+                    type == DroneShowLEDType_ServoWithLimits ||
+                    type == DroneShowLEDType_ServoWithLimits_OffIsZero,
+                    type == DroneShowLEDType_ServoWithLimits_OffIsZero
                 );
             }
             break;

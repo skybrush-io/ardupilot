@@ -46,8 +46,11 @@ enum DroneShowLEDType {
     // LED light is driven by ArduPilot's AP_Notify framework
     DroneShowLEDType_Notify = 12,
 
-    // LED light is attached to servo channels and respects configured min/max limits
-    DroneShowLEDType_ServoWithLimits = 13,
+    // LED light is attached to servo channels and respects configured min/max limits; off is always mapped to 0
+    DroneShowLEDType_ServoWithLimits_OffIsZero = 13,
+
+    // LED light is attached to servo channels and respects configured min/max limits; zero not handled differently
+    DroneShowLEDType_ServoWithLimits = 14,
 };
 
 class DroneShowLEDFactory
