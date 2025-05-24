@@ -1,0 +1,4 @@
+# hw definition file for processing by chibios_hwdef.py
+# for cmcopter, based on Pixhawk1
+
+include ../Pixhawk1/hwdef-bl.dat

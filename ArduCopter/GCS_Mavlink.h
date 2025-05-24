@@ -128,4 +128,5 @@ private:
     MAV_RESULT handle_MAV_CMD_DO_WINCH(const mavlink_command_int_t &packet);
 #endif
 
+    virtual void initialise_custom_message_intervals() override;
 };

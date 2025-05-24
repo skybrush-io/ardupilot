@@ -65,11 +65,26 @@ void Copter::failsafe_radio_on_event()
         announce_failsafe("Radio", "Continuing Auto");
         desired_action = FailsafeAction::NONE;
 
-    } else if ((flightmode->in_guided_mode()) && failsafe_option(FailsafeOption::RC_CONTINUE_IF_GUIDED)) {
+    } else if ((flightmode->in_guided_mode()) && (
+        failsafe_option(FailsafeOption::RC_CONTINUE_IF_GUIDED) ||
+#if COLLMOT_EXTENSIONS_ENABLED
+        collmot.allowContinueInGuidedModeWithoutGCSAndRC()
+#else
+        false
+#endif
+    )) {
         // Allow guided mode to continue when FS_OPTIONS is set to continue in guided mode
+        // or if the CollMot-specific "allow continuing in guided mode even without GCS and RC" flag is set
         announce_failsafe("Radio", "Continuing Guided Mode");
         desired_action = FailsafeAction::NONE;
 
+#if MODE_DRONE_SHOW_ENABLED
+    } else if (flightmode->mode_number() == Mode::Number::DRONE_SHOW && failsafe_option(FailsafeOption::RC_CONTINUE_IF_GUIDED)) {
+        // Allow drone show mode to continue when FS_OPTIONS is set to continue in guided mode
+        announce_failsafe("Radio", "Continuing Show");
+        desired_action = FailsafeAction::NONE;
+
+#endif
     } else {
         announce_failsafe("Radio");
     }
@@ -464,6 +479,9 @@ bool Copter::should_disarm_on_failsafe() {
         case Mode::Number::AUTO:
         case Mode::Number::AUTO_RTL:
             // if mission has not started AND vehicle is landed, disarm motors
+            return !ap.auto_armed && ap.land_complete;
+        case Mode::Number::DRONE_SHOW:
+            // if show has not started AND vehicle is landed, disarm motors
             return !ap.auto_armed && ap.land_complete;
         default:
             // used for AltHold, Guided, Loiter, RTL, Circle, Drift, Sport, Flip, Autotune, PosHold

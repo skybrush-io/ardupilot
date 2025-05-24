@@ -103,5 +103,6 @@ enum ap_message : uint8_t {
     MSG_HIGHRES_IMU,
 #endif
     MSG_AIRSPEED,
+    MSG_DRONE_SHOW_STATUS,
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };

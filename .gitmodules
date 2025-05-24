@@ -42,3 +42,6 @@
 [submodule "modules/lwip"]
 	path = modules/lwip
 	url = https://github.com/ArduPilot/lwip.git
+[submodule "modules/libskybrush"]
+	path = modules/libskybrush
+	url = https://github.com/skybrush-io/libskybrush

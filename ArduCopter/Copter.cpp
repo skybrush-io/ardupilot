@@ -150,7 +150,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(rc_loop,              250,    130,  3),
     SCHED_TASK(throttle_loop,         50,     75,  6),
 #if AP_FENCE_ENABLED
-    SCHED_TASK(fence_check,           25,    100,  7),
+    SCHED_TASK(fence_and_show_specific_safety_features_check, 25, 100, 7),
 #endif
     SCHED_TASK_CLASS(AP_GPS,               &copter.gps,                 update,          50, 200,   9),
 #if AP_OPTICALFLOW_ENABLED
@@ -243,6 +243,9 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #endif
 #ifdef USERHOOK_FASTLOOP
     SCHED_TASK(userhook_FastLoop,    100,     75, 153),
+#endif
+#if MODE_DRONE_SHOW_ENABLED
+    SCHED_TASK_CLASS(AC_DroneShowManager, (AC_DroneShowManager*)&copter.g2.drone_show_manager, update, 50, 100, 155),
 #endif
 #ifdef USERHOOK_50HZLOOP
     SCHED_TASK(userhook_50Hz,         50,     75, 156),
@@ -550,6 +553,25 @@ void Copter::throttle_loop()
     update_ekf_terrain_height_stable();
 }
 
+// check fence, hard fence and bubble fence
+#if AP_FENCE_ENABLED
+void Copter::fence_and_show_specific_safety_features_check(void)
+{
+    fence_check();
+
+#if MODE_DRONE_SHOW_ENABLED
+    // also check whether we have breached the fence for long enough to
+    // warrant a motor shutdown. This must be called after fence_check()
+    // to ensure that the breaches have already been updated in the fence
+    // object
+    hard_fence_check();
+
+    // also run a bubble fence check
+    bubble_fence_check();
+#endif
+}
+#endif
+
 // update_batt_compass - read battery and compass
 // should be called at 10hz
 void Copter::update_batt_compass(void)
@@ -666,6 +688,11 @@ void Copter::twentyfive_hz_logging()
         gyro_fft.write_log_messages();
     }
 #endif
+
+#if MODE_DRONE_SHOW_ENABLED
+    // log the current show state
+    g2.drone_show_manager.write_show_status_log_message();
+#endif
 }
 #endif  // HAL_LOGGING_ENABLED
 
@@ -715,6 +742,11 @@ void Copter::one_hz_loop()
 #if HAL_LOGGING_ENABLED
     // log terrain data
     terrain_logging();
+#endif
+
+#if MODE_DRONE_SHOW_ENABLED
+    // log the current geofence state
+    g2.drone_show_manager.write_fence_status_log_message();
 #endif
 
 #if HAL_ADSB_ENABLED

@@ -26,7 +26,7 @@ void AP_Periph_FW::handle_RTCMStream(CanardInstance* canard_instance, CanardRxTr
     if (uavcan_equipment_gnss_RTCMStream_decode(transfer, &req)) {
         return;
     }
-    gps.handle_gps_rtcm_fragment(0, req.data.data, req.data.len);
+    gps.handle_gps_rtcm_fragment(MAVLINK_COMM_0, 0, req.data.data, req.data.len);
 }
 
 /*

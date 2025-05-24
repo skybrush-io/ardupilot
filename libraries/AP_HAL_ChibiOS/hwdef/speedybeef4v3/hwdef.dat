@@ -148,9 +148,9 @@ SPIDEV sdcard    SPI2 DEVID2 SDCARD_CS  MODE0 400*KHZ 25*MHZ
 define HAL_OS_FATFS_IO 1
 
 # setup for OSD
-define OSD_ENABLED 1
-define HAL_OSD_TYPE_DEFAULT 1
-ROMFS_WILDCARD libraries/AP_OSD/fonts/font*.bin
+# define OSD_ENABLED 1
+# define HAL_OSD_TYPE_DEFAULT 1
+# ROMFS_WILDCARD libraries/AP_OSD/fonts/font*.bin
 
 # minimal drivers to reduce flash usage
 include ../include/minimize_fpv_osd.inc

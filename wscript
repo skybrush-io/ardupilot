@@ -620,6 +620,11 @@ def configure(cfg):
         cfg.srcnode.abspath() + '/libraries/',
     ])
 
+    cfg.env.append_value('GIT_SUBMODULES', 'libskybrush')
+    cfg.env.append_value('INCLUDES', [
+        cfg.srcnode.abspath() + '/modules/libskybrush/include/',
+    ])
+
     cfg.find_program('rsync', mandatory=False)
     if cfg.options.rsync_dest:
         cfg.msg('Setting rsync destination to', cfg.options.rsync_dest)

@@ -1,0 +1,4 @@
+# The Pixel has a MatekH743 with bidirectional DShot
+
+include ../MatekH743-bdshot/hwdef.dat
+

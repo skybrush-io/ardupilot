@@ -226,6 +226,8 @@ public:
         k_param_gcs5,
         k_param_gcs6,
 
+        k_param_collmot = 134,   // hopefully this won't clash with upstream for a while
+
         //
         // 135 : reserved for Solo until features merged with master
         //
@@ -678,6 +680,12 @@ public:
 
 #if WEATHERVANE_ENABLED
     AC_WeatherVane weathervane;
+#endif
+
+#if MODE_DRONE_SHOW_ENABLED
+    // we need a pointer to the mode for the G2 table
+    void *mode_drone_show_ptr;
+    AC_DroneShowManager_Copter drone_show_manager;
 #endif
 
     // payload place parameters

@@ -1607,7 +1607,7 @@ void AP_Param::load_defaults_file_from_filesystem(const char *default_file, bool
 {
     if (load_defaults_file(default_file, last_pass)) {
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
-        printf("Loaded defaults from %s\n", default_file);
+        if (last_pass) { printf("Loaded defaults from %s\n", default_file); }
 #endif
     } else {
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL

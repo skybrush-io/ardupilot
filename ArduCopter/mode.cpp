@@ -179,6 +179,12 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
             break;
 #endif
 
+#if MODE_DRONE_SHOW_ENABLED
+        case Mode::Number::DRONE_SHOW:
+            ret = (Mode *)g2.mode_drone_show_ptr;
+            break;
+#endif
+
         default:
             break;
     }

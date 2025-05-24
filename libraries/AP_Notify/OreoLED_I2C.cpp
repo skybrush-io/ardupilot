@@ -562,7 +562,16 @@ void OreoLED_I2C::send_sync(void)
     _dev->set_retries(2);
 }
 
-
+// Added to allow for rgb_control from AP Notify for OreoLED
+void OreoLED_I2C::rgb_control(uint8_t r, uint8_t g, uint8_t b, uint8_t rate_hz)
+{
+    if (rate_hz == 0) {
+        _pattern_override = OREOLED_PATTERN_SOLID;
+        set_rgb(OREOLED_INSTANCE_ALL, OREOLED_PATTERN_SOLID, r, g, b);
+    }
+    return;
+}
+ 
 
 #if AP_NOTIFY_MAVLINK_LED_CONTROL_SUPPORT_ENABLED
 // Handle an LED_CONTROL mavlink message

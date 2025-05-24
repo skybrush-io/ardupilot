@@ -31,6 +31,8 @@
 
 #include "ap_message.h"
 
+#include "MessageCounter.h"
+
 #define GCS_DEBUG_SEND_MESSAGE_TIMINGS 0
 
 // macros used to determine if a message will fit in the space available.
@@ -199,6 +201,8 @@ public:
     // accessors used to retrieve objects used for parsing incoming messages:
     mavlink_message_t *channel_buffer() { return &_channel_buffer; }
     mavlink_status_t *channel_status() { return &_channel_status; }
+
+    MessageCounter& rtcm_message_counter() { return _msg_counter; }
 
     void        update_receive(uint32_t max_time_us=1000);
     void        update_send();
@@ -898,6 +902,11 @@ private:
     void initialise_message_intervals_for_stream(GCS_MAVLINK::streams id);
     // call initialise_message_intervals_for_stream on every stream:
     void initialise_message_intervals_from_streamrates();
+    // hook function to allow customization of message intervals in derived
+    // classes.
+    // TODO(ntamas): migrate things to configuring stream rates from ROMFS
+    // instead using initialise_message_intervals_from_config_files()
+    virtual void initialise_custom_message_intervals() {};
     // boolean that indicated that message intervals have been set
     // from streamrates:
     bool deferred_messages_initialised;
@@ -1073,6 +1082,8 @@ private:
     void load_signing_key(void);
     bool signing_enabled(void) const;
     static void save_signing_timestamp(bool force_save_now);
+
+    MessageCounter _msg_counter;
 
 #if HAL_MAVLINK_INTERVALS_FROM_FILES_ENABLED
     // structure containing default intervals read from files for this

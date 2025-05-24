@@ -1041,6 +1041,7 @@ bool
 AP_GPS_UBLOX::_parse_gps(void)
 {
     if (_class == CLASS_ACK) {
+
         Debug("ACK %u", (unsigned)_msg_id);
 
         if(_msg_id == MSG_ACK_ACK) {

@@ -157,6 +157,12 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
+// Drone show - perform a timed waypoint flight with LED lights
+#ifndef MODE_DRONE_SHOW_ENABLED
+# define MODE_DRONE_SHOW_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
 // flip - fly vehicle in flip in pitch and roll direction mode
 #ifndef MODE_FLIP_ENABLED
 # define MODE_FLIP_ENABLED 1
@@ -569,6 +575,12 @@
 
 #if MODE_GUIDED_NOGPS_ENABLED && !MODE_GUIDED_ENABLED
   #error ModeGuided-NoGPS requires ModeGuided which is disabled
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// CollMot-specific extensions to stock firmware
+#ifndef COLLMOT_EXTENSIONS_ENABLED
+# define COLLMOT_EXTENSIONS_ENABLED 1
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
