@@ -603,9 +603,6 @@ void AC_DroneShowManager::_update_rgb_led_instance()
             previous_led_type = led_type;
             previous_channel = channel;
             previous_num_leds = num_leds;
-        } else if (_rgb_led) {
-            // Update minimum brightness if LED exists
-            _rgb_led->set_min_brightness(min_brightness);
         }
     }
 
@@ -613,6 +610,9 @@ void AC_DroneShowManager::_update_rgb_led_instance()
         // Update gamma correction parameter of LED
         float gamma = _params.led_specs[0].gamma;
         _rgb_led->set_gamma(gamma);
+
+        // Update minimum brightness
+        _rgb_led->set_min_brightness(_params.led_specs[0].min_brightness);
     }
 }
 
