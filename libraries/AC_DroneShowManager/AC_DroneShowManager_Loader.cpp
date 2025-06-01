@@ -78,6 +78,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     bool success = false;
 
     // Clear any previously loaded show
+    _set_event_list_and_take_ownership(0);
     _set_light_program_and_take_ownership(0);
     _set_trajectory_and_take_ownership(0);
     _set_yaw_control_and_take_ownership(0);
@@ -179,6 +180,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
         sb_trajectory_t loaded_trajectory;
         sb_light_program_t loaded_light_program;
         sb_yaw_control_t loaded_yaw_control;
+        sb_event_list_t loaded_event_list;
 
         _set_show_data_and_take_ownership(show_data);
 
@@ -231,13 +233,61 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
         }
         else if (retval)
         {
-            hal.console->printf("Error while parsing show file: %d\n", (int) retval);
+            hal.console->printf("Error while lading yaw data: %d\n", (int) retval);
         }
         else
         {
             _set_yaw_control_and_take_ownership(&loaded_yaw_control);
         }
 
+        retval = sb_event_list_init(&loaded_event_list, 4);
+        if (retval == ENOMEM)
+        {
+            hal.console->printf("Error while loading events: %d\n", (int) retval);
+        }
+        else
+        {
+            retval = sb_event_list_update_from_binary_file_in_memory(&loaded_event_list, show_data, stat_data.st_size);
+            if (retval == SB_ENOENT)
+            {
+                // No event list in show file, this is okay
+                retval = SB_SUCCESS;
+            }
+            else if (retval)
+            {
+                hal.console->printf("Error while loading events: %d\n", (int) retval);
+            }
+            else
+            {
+                // Adjust the timestamps of pyro events if needed
+                if (_params.pyro_spec.time_compensation_msec != 0) {
+                    sb_event_list_adjust_timestamps_by_type(
+                        &loaded_event_list, SB_EVENT_TYPE_PYRO,
+                        -_params.pyro_spec.time_compensation_msec
+                    );
+                }
+
+                // Also add pyro off events. This can potentially fail as we
+                // are inserting new events.
+                if (_params.pyro_spec.ignition_duration_msec > 0) {
+                    retval = sb_event_list_add_pyro_off_events(
+                        &loaded_event_list, _params.pyro_spec.ignition_duration_msec
+                    );
+                    if (retval != SB_SUCCESS) {
+                        hal.console->printf(
+                            "Error while adding pyro off events: %d\n", (int) retval
+                        );
+                    }
+                }
+            }
+
+            if (retval == SB_SUCCESS) {
+                _set_event_list_and_take_ownership(&loaded_event_list);
+            }
+            else {
+                sb_event_list_destroy(&loaded_event_list);
+            }
+        }
     }
 
     return success;
@@ -322,6 +372,25 @@ bool AC_DroneShowManager::_recalculate_trajectory_properties()
     }
 
     return true;
+}
+
+void AC_DroneShowManager::_set_event_list_and_take_ownership(sb_event_list_t *value)
+{
+    sb_event_list_player_destroy(_event_list_player);
+    sb_event_list_destroy(_event_list);
+
+    if (value)
+    {
+        *_event_list = *value;
+        _event_list_valid = true;
+    }
+    else
+    {
+        sb_event_list_init(_event_list, 0);
+        _event_list_valid = false;
+    }
+
+    sb_event_list_player_init(_event_list_player, _event_list);
 }
 
 void AC_DroneShowManager::_set_light_program_and_take_ownership(sb_light_program_t *value)

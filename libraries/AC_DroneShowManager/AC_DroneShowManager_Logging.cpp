@@ -1,6 +1,7 @@
 #include "AC_DroneShowManager.h"
 
 #include <AP_Logger/AP_Logger.h>
+#include <skybrush/events.h>
 
 // Write a drone show status log entry
 void AC_DroneShowManager::write_show_status_log_message() const
@@ -40,6 +41,27 @@ void AC_DroneShowManager::write_fence_status_log_message() const
         hard_breach_state: static_cast<uint8_t>(hard_fence.get_breach_state()),
         bubble_breach_state: static_cast<uint8_t>(bubble_fence.get_breach_state()),
         bubble_breach_count: bubble_fence.get_action_counter(),
+    };
+
+    AP::logger().WriteBlock(&pkt, sizeof(pkt));
+}
+
+// Write a drone show event log entry
+void AC_DroneShowManager::write_show_event_log_message(
+    const sb_event_t *event, DroneShowEventResult result) const
+{
+    if (!event) {
+        return;
+    }
+
+    const struct log_DroneShowEvent pkt {
+        LOG_PACKET_HEADER_INIT(LOG_DRONE_SHOW_EVENT_MSG),
+        time_us         : AP_HAL::micros64(),
+        show_clock_ms   : get_elapsed_time_since_start_msec(),
+        type            : static_cast<uint8_t>(event->type),
+        subtype         : event->subtype,
+        payload         : event->payload.as_uint32,
+        result          : static_cast<uint8_t>(result),
     };
 
     AP::logger().WriteBlock(&pkt, sizeof(pkt));

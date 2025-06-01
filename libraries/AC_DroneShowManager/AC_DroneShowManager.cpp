@@ -19,6 +19,7 @@
 
 #include "DroneShow_Constants.h"
 #include "DroneShowLEDFactory.h"
+#include "DroneShowPyroDeviceFactory.h"
 
 extern const AP_HAL::HAL &hal;
 
@@ -53,6 +54,9 @@ namespace CustomPackets {
 // LED factory that is used to create new RGB LED instances
 static DroneShowLEDFactory _rgb_led_factory_singleton;
 
+// Pyro device factory that is used to create new pyro device instances
+static DroneShowPyroDeviceFactory _pyro_device_factory_singleton;
+
 AC_DroneShowManager::AC_DroneShowManager() :
     hard_fence(),
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -74,6 +78,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _trajectory_is_circular(false),
     _cancel_requested(false),
     _controller_update_delta_msec(1000 / DEFAULT_UPDATE_RATE_HZ),
+    _pyro_device(0),
     _rgb_led(0),
     _rc_switches_blocked_until(0),
     _boot_count(0)
@@ -98,12 +103,24 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _yaw_player = new sb_yaw_player_t;
     sb_yaw_player_init(_yaw_player, _yaw_control);
 
-    // Don't call _update_rgb_led_instance() here, servo framework is not set
-    // up yet
+    _event_list = new sb_event_list_t;
+    sb_event_list_init(_event_list, 0);
+
+    _event_list_player = new sb_event_list_player_t;
+    sb_event_list_player_init(_event_list_player, _event_list);
+
+    // Don't call _update_rgb_led_instance() or _update_pyro_device_instance()
+    // here, servo framework is not set up yet
 }
 
 AC_DroneShowManager::~AC_DroneShowManager()
 {
+    sb_event_list_player_destroy(_event_list_player);
+    delete _event_list_player;
+
+    sb_event_list_destroy(_event_list);
+    delete _event_list;
+
     sb_yaw_player_destroy(_yaw_player);
     delete _yaw_player;
 
@@ -135,9 +152,10 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     AP_Int16* boot_count_param = static_cast<AP_Int16*>(AP_Param::find("STAT_BOOTCNT", &ptype));
     _boot_count = boot_count_param ? (*boot_count_param) : 0;
 
-    // Get a reference to the RGB LED factory
+    // Get references to the RGB LED and pyro device factories
+    _pyro_device_factory = &_pyro_device_factory_singleton;
     _rgb_led_factory = &_rgb_led_factory_singleton;
-
+    
     // Store a reference to wp_nav so we can ask what the takeoff speed will be
     _wp_nav = wp_nav;
 
@@ -151,6 +169,7 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     _open_rgb_led_socket();
 #endif
+    _update_pyro_device_instance();
     _update_rgb_led_instance();
 
     // initialise safety features
@@ -634,6 +653,7 @@ bool AC_DroneShowManager::handle_message(const mavlink_message_t& msg)
 void AC_DroneShowManager::notify_drone_show_mode_initialized()
 {
     _cancel_requested = false;
+    _update_pyro_device_instance();
     _update_rgb_led_instance();
     _clear_start_time_if_set_by_switch();
 }
@@ -663,6 +683,7 @@ void AC_DroneShowManager::notify_drone_show_mode_entered_stage(DroneShowModeStag
 void AC_DroneShowManager::notify_drone_show_mode_exited()
 {
     _cancel_requested = false;
+    _update_pyro_device_instance();
     _update_rgb_led_instance();
     _clear_start_time_if_set_by_switch();
     _last_setpoint.clear();
@@ -861,6 +882,7 @@ void AC_DroneShowManager::update()
         _check_radio_failsafe();
         _update_preflight_check_result();
         _update_lights();
+        _trigger_events();
     } else {
         _repeat_last_rgb_led_command();
     }

@@ -16,6 +16,8 @@
 
 #include <skybrush/colors.h>
 
+#include "DroneShow_Enums.h"
+
 struct sb_trajectory_s;
 struct sb_trajectory_player_s;
 
@@ -25,100 +27,17 @@ struct sb_light_player_s;
 struct sb_yaw_control_s;
 struct sb_yaw_player_s;
 
+struct sb_event_list_s;
+struct sb_event_list_player_s;
+
 class DroneShowLEDFactory;
 class DroneShowLED;
+class DroneShowPyroDeviceFactory;
+class DroneShowPyroDevice;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #  include <AP_HAL/utility/Socket.h>
 #endif
-
-// Drone show mode stages
-enum DroneShowModeStage {
-    DroneShow_Off,
-    DroneShow_Init,
-    DroneShow_WaitForStartTime,
-    DroneShow_Takeoff,
-    DroneShow_Performing,
-    DroneShow_RTL,
-    DroneShow_Loiter,
-    DroneShow_Landing,
-    DroneShow_Landed,
-    DroneShow_Error,
-    DroneShow_TestingLights,
-};
-
-// Enum representing the flags in the control mode bitmasp
-enum DroneShowControlModeFlag {
-    DroneShowControl_VelocityControlEnabled = 1,
-    DroneShowControl_AccelerationControlEnabled = 2,
-};
-
-// Enum representing the authorization scopes for the start of the show
-enum DroneShowAuthorization : int8_t {
-    // Show not authorized to start
-    DroneShowAuthorization_Revoked = 0,
-
-    // SHow authorized to start in live mode (all safety features enabled)
-    DroneShowAuthorization_Granted_Live = 1,
-
-    // Show authorized to start in rehearsal mode (bubble fence action forcibly
-    // set to reporting only)
-    DroneShowAuthorization_Granted_Rehearsal = 2,
-
-    // Show authorized to start with lights only, no takeoff is allowed
-    DroneShowAuthorization_Granted_Lights_Only = 3,
-};
-
-// Flags representing various failures in drone show specific preflight checks.
-// These are not part of the standard ArduPilot prearm check framework; we
-// check these periodically on our own when we are in the "waiting for start
-// time" stage.
-//
-// The numeric values are important. In the status packet we have four bits to
-// send information about preflight checks, but some things that are checked in
-// the preflight code are also sent in the status packet in other places (due to
-// historical reasons). The flags that must be sent in those four bits that we
-// have available for preflight check information must have values >= 16. Sorry,
-// this is a bit of a mess but we need to keep backwards compatibility.
-enum DroneShowPreflightCheckFlag {
-    DroneShowPreflightCheck_ShowNotConfiguredYet = (1 << 0),
-    // Flags from this point onwards are sent in the dedicated four bits of the
-    // status packet
-    DroneShowPreflightCheck_NotAtTakeoffPosition = (1 << 7),
-};
-
-// Light effect type when the lights are driven from the GCS
-enum LightEffectType {
-    LightEffect_Off,
-    LightEffect_Solid,
-    LightEffect_Blinking,
-    LightEffect_Breathing,
-    LightEffect_Last = LightEffect_Breathing
-};
-
-// Priority of light effects to allow internal requests to take precedence over
-// individual user requests, and to allow individual user requests to take
-// precedence over requests broadcast from the GCS
-enum LightEffectPriority {
-    LightEffectPriority_None = 0,
-    LightEffectPriority_Broadcast = 1, // preferred swarm-level color sent from GCS
-    LightEffectPriority_Individual = 2, // preferred color requested individually
-    LightEffectPriority_Internal = 3 // internal light signals, e.g. compass calibration light signal
-};
-
-// Time synchronization mode used when starting the show
-enum TimeSyncMode {
-    TimeSyncMode_Countdown = 0, // Ignore SHOW_START_TIME and expect countdown messages from GCS
-    TimeSyncMode_GPS = 1 // Use SHOW_START_TIME and synchronize based on GPS time
-};
-
-// Possible actions to take at the end of the show
-enum PostAction {
-    PostAction_Loiter = 0, // Switch to loiter flight mode
-    PostAction_Land = 1,   // Switch to landing flight mode
-    PostAction_RTL = 2,    // Switch to RTL flight mode unconditionally
-    PostAction_RTLOrLand = 3 // Switch to RTL flight mode if above home, otherwise switch to landing flight mode
-};
 
 /// @class  AC_DroneShowManager
 /// @brief  Class managing the trajectory and light program of a drone show
@@ -540,11 +459,14 @@ public:
     // Returns whether the manager uses GPS time to start the show
     bool uses_gps_time_for_show_start() const { return _params.time_sync_mode == TimeSyncMode_GPS; }
 
-    // Writes a message containing a summary of the gefence status into the logs
+    // Writes a message containing a summary of the gefence status into the log
     void write_fence_status_log_message() const;
 
-    // Writes a message holding the status of the drone show subsystem into the logs
+    // Writes a message holding the status of the drone show subsystem into the log
     void write_show_status_log_message() const;
+
+    // Writes a message logging the execution of an event from the show file into the log
+    void write_show_event_log_message(const struct sb_event_s *event, DroneShowEventResult result) const;
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -645,6 +567,20 @@ private:
             AP_Float min_brightness;
         } led_specs[1];
 
+        struct {
+            // Specifies the type of the pyrotechnic device
+            AP_Int8 type;
+
+            // Time compensation for the pyro device, in milliseconds
+            AP_Int32 time_compensation_msec;
+
+            // Ignition time for the pyro device, in milliseconds
+            AP_Int32 ignition_duration_msec;
+        } pyro_spec;
+
+        // Minimum altitude above which pyrotechnic effects can be triggered
+        AP_Float pyro_min_altitude_m;
+
         // Action to take at the end of the show
         AP_Int8 post_action;
     } _params;
@@ -672,6 +608,10 @@ private:
     struct sb_yaw_control_s* _yaw_control;
     struct sb_yaw_player_s* _yaw_player;
     bool _yaw_control_valid;
+
+    struct sb_event_list_s* _event_list;
+    struct sb_event_list_player_s* _event_list_player;
+    bool _event_list_valid;
 
     // Result of the drone show specific preflight checks. Updated periodically
     // from _update_preflight_check_result(). See the values from the
@@ -757,6 +697,12 @@ private:
     // during the execution of the show. Updated soon after the corresponding
     // parameter changes.
     uint32_t _controller_update_delta_msec;
+
+    // Factory object that can create pyro device instances that the drone show manager will control
+    DroneShowPyroDeviceFactory* _pyro_device_factory;
+
+    // Pyro device that the drone show manager controls
+    DroneShowPyroDevice* _pyro_device;
 
     // Factory object that can create RGBLed instances that the drone show manager will control
     DroneShowLEDFactory* _rgb_led_factory;
@@ -881,6 +827,9 @@ private:
     // that it has accurate tiem information.
     bool _is_gps_time_ok() const;
 
+    // Returns whether pyro events can be handled safely in the current state
+    bool _is_pyro_safe_to_fire() const;
+
     // Recalculates the values of some internal variables that are derived from
     // the current trajectory when it is loaded.
     bool _recalculate_trajectory_properties() WARN_IF_UNUSED;
@@ -889,10 +838,14 @@ private:
     virtual void _request_switch_to_show_mode() {};
 
     bool _load_show_file_from_storage();
+    void _set_event_list_and_take_ownership(struct sb_event_list_s *value);
     void _set_light_program_and_take_ownership(struct sb_light_program_s *value);
     void _set_trajectory_and_take_ownership(struct sb_trajectory_s *value);
     void _set_show_data_and_take_ownership(uint8_t *value);
     void _set_yaw_control_and_take_ownership(struct sb_yaw_control_s *value);
+
+    // Triggers pending events from the event list of the show
+    void _trigger_events();
 
     // Updates the state of the LED light on the drone. This has to be called
     // regularly at 25 Hz
@@ -903,9 +856,14 @@ private:
     // called regularly, but it is rate-limited to 1 Hz
     void _update_preflight_check_result(bool force = 0);
 
+    // Updates the pyro device instance that is used for pyro effects. Note that
+    // this function updates the identity of the pyro device object based on the
+    // pyro settings, but does _not_ trigger any pyro events
+    void _update_pyro_device_instance();
+
     // Updates the RGB LED instance that is used as an output. Note that this
     // function updates the identity of the RGB LED object based on the current
-    // servo channel settings, _not_ the state of the LED itself
+    // RGB LED settings, _not_ the state of the LED itself
     void _update_rgb_led_instance();
 
     // Repeats the last LED command. Used when the channel that transmits the

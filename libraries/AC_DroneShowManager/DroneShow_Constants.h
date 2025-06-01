@@ -49,6 +49,9 @@
 // Default vertical bubble fence drift tolerance level, in meters.
 #define DEFAULT_BUBBLE_FENCE_MAX_Z_DRIFT_METERS 10.0f
 
+// Default minimum altitude for pyro events, in meters.
+#define DEFAULT_PYRO_MIN_ALTITUDE_METERS 20.0f
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 // UDP port that the drone show manager uses to broadcast the status of the RGB light
 // when compiled with the SITL simulator. Uncomment if you need it.

@@ -3,6 +3,7 @@
 
 #include "AC_DroneShowManager.h"
 #include "DroneShow_Constants.h"
+#include "DroneShowPyroDeviceFactory.h"
 
 static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage);
 
@@ -270,7 +271,32 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("BFENCE_ACT", 31, AC_DroneShowManager, bubble_fence._params.action, 1),
 
-    // Currently used max parameter ID: 32; update this if you add more parameters.
+    // @Param: PYRO_MINALT
+    // @DisplayName: Minimum altitude for pyro events
+    // @Description: Minimum altitude above the takeoff position required for triggering pyrotechnic effects
+    // @User: Standard
+    AP_GROUPINFO("PYRO_MINALT", 33, AC_DroneShowManager, _params.pyro_min_altitude_m, DEFAULT_PYRO_MIN_ALTITUDE_METERS),
+
+    // @Param: PYRO_TYPE
+    // @DisplayName: Pyrotechnic device type
+    // @Description: Specifies the type of the pyrotechnic device that is used to trigger pyrotechnic effects during the show
+    // @Values: 0:None, 1:Debug, 2:Servo
+    // @User: Advanced
+    AP_GROUPINFO("PYRO_TYPE", 34, AC_DroneShowManager, _params.pyro_spec.type, DroneShowPyroDeviceType_None),
+
+    // @Param: PYRO_TCOMP
+    // @DisplayName: Time compensation for pyrotechnic events
+    // @Description: Time compensation to apply to the pyrotechnic events, in milliseconds. This is used to compensate for the delay between the moment when the command is sent and the moment when the pyrotechnic device actually fires.
+    // @User: Advanced
+    AP_GROUPINFO("PYRO_TCOMP", 35, AC_DroneShowManager, _params.pyro_spec.time_compensation_msec, 0),
+
+    // @Param: PYRO_ITIME
+    // @DisplayName: Ignition duration for pyrotechnic events
+    // @Description: Duration for which the pyrotechnic device is ignited, in milliseconds. Zero means forever.
+    // @User: Advanced
+    AP_GROUPINFO("PYRO_ITIME", 36, AC_DroneShowManager, _params.pyro_spec.ignition_duration_msec, 3000),
+
+    // Currently used max parameter ID: 36; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND

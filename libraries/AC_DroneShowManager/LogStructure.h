@@ -4,7 +4,8 @@
 
 #define LOG_IDS_FROM_DRONE_SHOW \
     LOG_DRONE_SHOW_MSG, \
-    LOG_FENCE_STATUS_MSG
+    LOG_FENCE_STATUS_MSG, \
+    LOG_DRONE_SHOW_EVENT_MSG
 
 // @LoggerMessage: SHOW
 // @Description: Drone show mode information
@@ -52,8 +53,30 @@ struct PACKED log_FenceStatus {
     uint16_t bubble_breach_count;
 };
 
+// @LoggerMessage: SBEV
+// @Description: Skybrush show file event execution log
+// @Field: TimeUS: Time since system startup
+// @Field: ClockMS: Time on the show clock
+// @Field: Type: Type of the event from the show file
+// @Field: Subtype: Subtype of the event from the show file
+// @Field: Payload: Payload of the event from the show file as uint32_t
+// @Field: Result: Result of the event execution
+
+// drone show events
+struct PACKED log_DroneShowEvent {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    int32_t show_clock_ms;
+    uint8_t type;
+    uint8_t subtype;
+    uint32_t payload;
+    uint8_t result;
+};
+
 #define LOG_STRUCTURE_FROM_DRONE_SHOW \
     { LOG_DRONE_SHOW_MSG, sizeof(log_DroneShowStatus),                  \
       "SHOW", "QiBBBBff", "TimeUS,ClockMS,Stage,R,G,B,HDist,VDist", "ss----mm", "FC----BB" }, \
     { LOG_FENCE_STATUS_MSG, sizeof(log_FenceStatus),                    \
-      "FNCS", "QBBHBBH", "TimeUS,GeoEn,GeoB,GeoCnt,HardB,BubbleB,BubbleCnt", "s------", "F------" }
+      "FNCS", "QBBHBBH", "TimeUS,GeoEn,GeoB,GeoCnt,HardB,BubbleB,BubbleCnt", "s------", "F------" }, \
+    { LOG_DRONE_SHOW_EVENT_MSG, sizeof(log_DroneShowEvent),              \
+      "SBEV", "QiBBIB", "TimeUS,ClockMS,Type,Subtype,Payload,Result", "ss----", "FC----" }
