@@ -856,9 +856,17 @@ private:
     // called regularly, but it is rate-limited to 1 Hz
     void _update_preflight_check_result(bool force = 0);
 
-    // Updates the pyro device instance that is used for pyro effects. Note that
+    // Updates the state of the pyro device on the drone. This has to be called
+    // regularly at 25 Hz. Takes care of turning off pyro channels after the
+    // ignition time has passed, and also takes care of pending channel test
+    // requests.
+    void _update_pyro_device();
+
+    // Updates the pyro device _instance_ that is used for pyro effects. Note that
     // this function updates the identity of the pyro device object based on the
-    // pyro settings, but does _not_ trigger any pyro events
+    // pyro settings, but does _not_ trigger any pyro events. For triggering
+    // pyro events, see `_trigger_events()`. For turning off pyro channels based
+    // on the ignition time, see `_update_pyro_device()`.
     void _update_pyro_device_instance();
 
     // Updates the RGB LED instance that is used as an output. Note that this

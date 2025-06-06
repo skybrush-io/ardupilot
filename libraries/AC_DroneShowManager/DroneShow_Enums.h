@@ -100,5 +100,4 @@ enum DroneShowEventResult : uint8_t {
     DroneShowEventResult_NotSupported = 2, // Event type not supported
     DroneShowEventResult_Unsafe = 3, // Event not executed due to safety reasons
     DroneShowEventResult_TimeMissed = 4, // Event not executed because the time was missed
-    DroneShowEventResult_SkipLogging = 5, // Event executed, nothing to log
 };

@@ -881,8 +881,9 @@ void AC_DroneShowManager::update()
         _check_events();
         _check_radio_failsafe();
         _update_preflight_check_result();
-        _update_lights();
         _trigger_events();
+        _update_lights();
+        _update_pyro_device();
     } else {
         _repeat_last_rgb_led_command();
     }

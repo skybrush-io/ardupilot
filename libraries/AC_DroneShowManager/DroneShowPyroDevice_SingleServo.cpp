@@ -6,24 +6,24 @@
 
 extern const AP_HAL::HAL& hal;
 
-DroneShowPyroDevice_SingleServo::DroneShowPyroDevice_SingleServo(uint8_t servo_channel)
-    : _servo_channel(servo_channel)
-{
-}
-
-bool DroneShowPyroDevice_SingleServo::init()
+bool DroneShowPyroDevice_SingleServo::init_impl()
 {
     hal.rcout->enable_ch(_servo_channel);
     set_duty_cycle_percentage(0);
     return true;
 }
 
-void DroneShowPyroDevice_SingleServo::deinit()
+void DroneShowPyroDevice_SingleServo::deinit_impl()
 {
     set_duty_cycle_percentage(0);
 }
 
-DroneShowEventResult DroneShowPyroDevice_SingleServo::fire(uint8_t channel)
+uint8_t DroneShowPyroDevice_SingleServo::num_channels() const
+{
+    return 2;
+}
+
+DroneShowEventResult DroneShowPyroDevice_SingleServo::fire_impl(uint8_t channel)
 {
     // 85% triggers channel 0, 100% triggers channel 1. We support two channels
     // at most.
@@ -33,7 +33,7 @@ DroneShowEventResult DroneShowPyroDevice_SingleServo::fire(uint8_t channel)
         : DroneShowEventResult_Failure;
 }
 
-DroneShowEventResult DroneShowPyroDevice_SingleServo::off(uint8_t channel)
+DroneShowEventResult DroneShowPyroDevice_SingleServo::off_impl(uint8_t channel)
 {
     // Turn off the ignition by setting the duty cycle to 0%
     return set_duty_cycle_percentage(0)

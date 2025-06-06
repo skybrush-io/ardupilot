@@ -12,11 +12,11 @@
 class DroneShowPyroDevice_Debug : public DroneShowPyroDevice {
 public:
     DroneShowPyroDevice_Debug() : DroneShowPyroDevice() {};
-
-    DroneShowEventResult fire(uint8_t channel) override;
-    DroneShowEventResult off(uint8_t channel) override;
+    uint8_t num_channels() const override;
 
 protected:
+    DroneShowEventResult fire_impl(uint8_t channel) override;
+    DroneShowEventResult off_impl(uint8_t channel) override;
 
 private:
 };

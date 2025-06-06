@@ -37,10 +37,9 @@ void AC_DroneShowManager::_trigger_events()
 
         switch (event->type) {
             case SB_EVENT_TYPE_PYRO:
-            
+                // Handle pyro events
                 if (!_pyro_device) {
                     result = DroneShowEventResult_NotSupported;
-                    break;
                 } else if (event->payload.as_uint32 == UINT32_MAX) {
                     result = _pyro_device->off(event->subtype);
                 } else if (!_is_pyro_safe_to_fire()) {
@@ -58,19 +57,17 @@ void AC_DroneShowManager::_trigger_events()
                 break;
         }
 
-        if (result != DroneShowEventResult_SkipLogging) {
-            const struct log_DroneShowEvent pkt {
-                LOG_PACKET_HEADER_INIT(LOG_DRONE_SHOW_EVENT_MSG),
-                time_us         : AP_HAL::micros64(),
-                show_clock_ms   : static_cast<int32_t>(elapsed_time_sec * 1000.0f),
-                type            : static_cast<uint8_t>(event->type),
-                subtype         : event->subtype,
-                payload         : event->payload.as_uint32,
-                result          : static_cast<uint8_t>(result),
-            };
+        const struct log_DroneShowEvent pkt {
+            LOG_PACKET_HEADER_INIT(LOG_DRONE_SHOW_EVENT_MSG),
+            time_us         : AP_HAL::micros64(),
+            show_clock_ms   : static_cast<int32_t>(elapsed_time_sec * 1000.0f),
+            type            : static_cast<uint8_t>(event->type),
+            subtype         : event->subtype,
+            payload         : event->payload.as_uint32,
+            result          : static_cast<uint8_t>(result),
+        };
 
-            AP::logger().WriteBlock(&pkt, sizeof(pkt));
-        }
+        AP::logger().WriteBlock(&pkt, sizeof(pkt));
 
         events_left--;
     }

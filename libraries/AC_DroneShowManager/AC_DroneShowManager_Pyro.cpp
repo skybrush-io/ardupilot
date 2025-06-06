@@ -50,6 +50,13 @@ bool AC_DroneShowManager::_is_pyro_safe_to_fire() const
     return true;
 }
 
+void AC_DroneShowManager::_update_pyro_device()
+{
+    if (_pyro_device != NULL) {
+        _pyro_device->turn_off_channels_if_needed(_params.pyro_spec.ignition_duration_msec);
+    }
+}
+
 void AC_DroneShowManager::_update_pyro_device_instance()
 {
     static int previous_pyro_type = -1;

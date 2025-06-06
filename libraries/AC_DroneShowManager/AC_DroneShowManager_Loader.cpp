@@ -266,19 +266,6 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
                         -_params.pyro_spec.time_compensation_msec
                     );
                 }
-
-                // Also add pyro off events. This can potentially fail as we
-                // are inserting new events.
-                if (_params.pyro_spec.ignition_duration_msec > 0) {
-                    retval = sb_event_list_add_pyro_off_events(
-                        &loaded_event_list, _params.pyro_spec.ignition_duration_msec
-                    );
-                    if (retval != SB_SUCCESS) {
-                        hal.console->printf(
-                            "Error while adding pyro off events: %d\n", (int) retval
-                        );
-                    }
-                }
             }
 
             if (retval == SB_SUCCESS) {
