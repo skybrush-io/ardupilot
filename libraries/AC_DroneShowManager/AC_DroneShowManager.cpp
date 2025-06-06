@@ -580,6 +580,32 @@ MAV_RESULT AC_DroneShowManager::handle_command_int_packet(const mavlink_command_
             } else {
                 return MAV_RESULT_FAILED;
             }
+        } else if (is_zero(packet.param1 - 2)) {
+            // Trigger pyro test
+            uint8_t start = packet.param2 >= 0 && packet.param2 < 255 ? packet.param2 : 255;
+            uint8_t num_channels = packet.param3 >= 0 && packet.param3 < 256 ?
+                static_cast<uint8_t>(packet.param3) : 255;
+            uint32_t delay_msec = isfinite(packet.param4) && packet.param4 >= 0 ? (packet.param4 * 1000.0f) : 0;
+            
+            if (num_channels == 0) {
+                // num_channels == 0 means all channels starting from 'start'
+                // up to whatever the pyro device supports. We just use 255 and
+                // then clamp it later
+                num_channels = 255;
+            }
+
+            if (start < 255) {
+                if (_pyro_device == nullptr) {
+                    // No pyro device is configured, cannot start the test
+                    return MAV_RESULT_FAILED;
+                } else {
+                    if (static_cast<uint16_t>(start) + num_channels > _pyro_device->num_channels()) {
+                        num_channels = _pyro_device->num_channels() - start;
+                    }
+                    _pyro_test_state.start(start, num_channels, delay_msec);
+                    return MAV_RESULT_ACCEPTED;
+                }
+            }
         }
 
         // Unsupported command code
@@ -881,7 +907,7 @@ void AC_DroneShowManager::update()
         _check_events();
         _check_radio_failsafe();
         _update_preflight_check_result();
-        _trigger_events();
+        _trigger_show_events();
         _update_lights();
         _update_pyro_device();
     } else {

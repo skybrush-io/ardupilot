@@ -83,6 +83,30 @@ private:
         bool is_valid() const { return origin_lat != 0 && origin_lng != 0; };
     };
 
+    class PyroTestState {
+    public:
+        PyroTestState() {
+            clear();
+        }
+
+        void clear();
+        void start(uint8_t channel, uint8_t num_channels, uint32_t delta_msec);
+        bool update(uint8_t& channel);
+
+    private:
+        // Timestamp when the last channel was fired, in milliseconds. 0 = not started
+        uint32_t last_fired_at_msec;
+
+        // Next channel index to teset
+        uint8_t next_channel;
+
+        // Number of channels to test
+        uint8_t channels_remaining;
+
+        // Time between consecutive channel tests, in milliseconds
+        uint32_t delta_msec;
+    };
+
 public:
     AC_DroneShowManager();
     ~AC_DroneShowManager();
@@ -704,6 +728,9 @@ private:
     // Pyro device that the drone show manager controls
     DroneShowPyroDevice* _pyro_device;
 
+    // State of the pyro test
+    PyroTestState _pyro_test_state;
+
     // Factory object that can create RGBLed instances that the drone show manager will control
     DroneShowLEDFactory* _rgb_led_factory;
 
@@ -845,7 +872,7 @@ private:
     void _set_yaw_control_and_take_ownership(struct sb_yaw_control_s *value);
 
     // Triggers pending events from the event list of the show
-    void _trigger_events();
+    void _trigger_show_events();
 
     // Updates the state of the LED light on the drone. This has to be called
     // regularly at 25 Hz
@@ -865,7 +892,7 @@ private:
     // Updates the pyro device _instance_ that is used for pyro effects. Note that
     // this function updates the identity of the pyro device object based on the
     // pyro settings, but does _not_ trigger any pyro events. For triggering
-    // pyro events, see `_trigger_events()`. For turning off pyro channels based
+    // pyro events, see `_trigger_show_events()`. For turning off pyro channels based
     // on the ignition time, see `_update_pyro_device()`.
     void _update_pyro_device_instance();
 

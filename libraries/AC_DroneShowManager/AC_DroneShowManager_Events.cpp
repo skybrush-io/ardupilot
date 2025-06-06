@@ -6,7 +6,7 @@
 
 #include <skybrush/events.h>
 
-void AC_DroneShowManager::_trigger_events()
+void AC_DroneShowManager::_trigger_show_events()
 {
     const sb_event_t* event;
     DroneShowEventResult result;

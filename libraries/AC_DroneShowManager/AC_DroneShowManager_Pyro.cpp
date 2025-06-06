@@ -1,5 +1,6 @@
 #include <AC_Fence/AC_Fence.h>
 #include <AP_Notify/AP_Notify.h>
+#include <GCS_MAVLink/GCS.h>
 #include "AC_DroneShowManager.h"
 
 #include "DroneShowPyroDeviceFactory.h"
@@ -52,6 +53,17 @@ bool AC_DroneShowManager::_is_pyro_safe_to_fire() const
 
 void AC_DroneShowManager::_update_pyro_device()
 {
+    uint8_t channel;
+
+    if (_pyro_test_state.update(channel)) {
+        if (_pyro_device != NULL) {
+            if (_pyro_device->fire(channel) != DroneShowEventResult_Success) {
+                // Stop the test if any of the tested channels fails
+                _pyro_test_state.clear();
+            }
+        }
+    }
+
     if (_pyro_device != NULL) {
         _pyro_device->turn_off_channels_if_needed(_params.pyro_spec.ignition_duration_msec);
     }
@@ -91,4 +103,50 @@ void AC_DroneShowManager::_update_pyro_device_instance()
         // Update settings if needed.
         // Nothing to do here at the moment.
     }
+}
+
+// Clears the pyro test state
+void AC_DroneShowManager::PyroTestState::clear() {
+    last_fired_at_msec = 0;
+    next_channel = 0;
+    channels_remaining = 0;
+    delta_msec = 0;
+}
+
+void AC_DroneShowManager::PyroTestState::start(uint8_t channel, uint8_t num_channels, uint32_t delta_msec_) {
+    last_fired_at_msec = AP_HAL::millis() - delta_msec_;
+    next_channel = channel;
+    channels_remaining = num_channels;
+    delta_msec = delta_msec_;
+
+    if (channels_remaining > 0) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Starting pyro test");
+    }
+}
+
+// Updates the pyro test state. Returns whether a channel should be
+// fired now. Returns the index of the channel in the first argument.
+bool AC_DroneShowManager::PyroTestState::update(uint8_t& channel) {
+    if (last_fired_at_msec == 0 || channels_remaining == 0) {
+        return false;
+    }
+
+    uint32_t now = AP_HAL::millis();
+    if (now - last_fired_at_msec < delta_msec) {
+        return false;
+    }
+
+    // Update the state for the next channel
+    last_fired_at_msec = now;
+    channel = next_channel;
+    channels_remaining--;
+    next_channel++;
+
+    if (channels_remaining == 0) {
+        // Reset the state if we have no more channels to test
+        gcs().send_text(MAV_SEVERITY_INFO, "Finished pyro test");
+        clear();
+    }
+
+    return true;
 }
