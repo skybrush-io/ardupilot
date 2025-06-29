@@ -18,38 +18,11 @@
 #include <skybrush/skybrush.h>
 
 #include "DroneShow_Constants.h"
+#include "DroneShow_CustomPackets.h"
 #include "DroneShowLEDFactory.h"
 #include "DroneShowPyroDeviceFactory.h"
 
 extern const AP_HAL::HAL &hal;
-
-namespace CustomPackets {
-    static const uint8_t START_CONFIG = 1;
-    static const uint8_t CRTL_TRIGGER = 2;
-
-    typedef struct PACKED {
-        // Start time to set on the drone, in GPS time of week (sec). Anything
-        // larger than 604799 means not to touch the start time that is
-        // currently set. Negative number means that the start time must be
-        // cleared.
-        int32_t start_time;
-        DroneShowAuthorization authorization;
-
-        struct PACKED {
-            // Countdown, i.e. number of milliseconds until the start of the show.
-            // Positive number means that there is still some time left.
-            int32_t countdown_msec;
-        } optional_part;
-    } start_config_t;
-
-    typedef struct PACKED {
-        // Timestamp to trigger collective RTL at, relative to the show start,
-        // in seconds. Zero is a special value, it clears any scheduled
-        // collective RTL for the future if the drone has not started the
-        // CRTL trajectory yet.
-        uint16_t start_time;
-    } crtl_trigger_t;
-};
 
 // LED factory that is used to create new RGB LED instances
 static DroneShowLEDFactory _rgb_led_factory_singleton;
@@ -837,7 +810,7 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
 
     mavlink_msg_data16_send(
         chan,
-        0x5b,   // Skybrush status packet type marker
+        CustomPackets::DRONE_TO_GCS,   // Skybrush status packet type marker
         14,     // effective packet length
         packet
     );
@@ -1032,7 +1005,7 @@ bool AC_DroneShowManager::_handle_data16_message(const mavlink_message_t& msg)
 {
     mavlink_data16_t packet;
     mavlink_msg_data16_decode(&msg, &packet);
-    if (packet.type != 0x5C || packet.len < 1) {
+    if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
     return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
@@ -1042,7 +1015,7 @@ bool AC_DroneShowManager::_handle_data32_message(const mavlink_message_t& msg)
 {
     mavlink_data32_t packet;
     mavlink_msg_data32_decode(&msg, &packet);
-    if (packet.type != 0x5C || packet.len < 1) {
+    if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
     return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
@@ -1052,7 +1025,7 @@ bool AC_DroneShowManager::_handle_data64_message(const mavlink_message_t& msg)
 {
     mavlink_data64_t packet;
     mavlink_msg_data64_decode(&msg, &packet);
-    if (packet.type != 0x5C || packet.len < 1) {
+    if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
     return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
@@ -1062,7 +1035,7 @@ bool AC_DroneShowManager::_handle_data96_message(const mavlink_message_t& msg)
 {
     mavlink_data96_t packet;
     mavlink_msg_data96_decode(&msg, &packet);
-    if (packet.type != 0x5C || packet.len < 1) {
+    if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
     return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
