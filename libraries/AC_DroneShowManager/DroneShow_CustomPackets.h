@@ -11,8 +11,9 @@ namespace CustomPackets {
     static const uint8_t SIMPLE_GEOFENCE_SETUP = 3;
     static const uint8_t ACKNOWLEDGMENT = 4;
 
-    static const uint8_t DRONE_TO_GCS = 0x5b;
+    static const uint8_t DRONE_TO_GCS_STATUS = 0x5b;
     static const uint8_t GCS_TO_DRONE = 0x5c;
+    static const uint8_t DRONE_TO_GCS = 0x5d;
 
     typedef struct PACKED {
         // Start time to set on the drone, in GPS time of week (sec). Anything
@@ -44,11 +45,11 @@ namespace CustomPackets {
 
         // Maximum altitude of the geofence, in decimeters above ground level.
         // Zero means that the altitude fence is off.
-        uint16_t max_altitude;
+        uint16_t max_altitude_dm;
 
         // Radius of the circle geofence, in decimeters. Zero means that the
         // circular fence is off.
-        uint16_t radius;
+        uint16_t radius_dm;
 
         // Acknowledgment token to return to the sender
         uint16_t ack_token;
@@ -62,17 +63,13 @@ namespace CustomPackets {
 
         // The rest of the packet contains the geofence points in the show
         // coordinate system as (x, y) pairs, where x and y are in decimeters
-        // and are encoded as 16-bit signed integers. Note that we do not
-        // reserve space for the entire array as we do not know how many points
-        // there will be; the 'points' field should only be used in 'offsetof'
-        // expressions.
+        // and are encoded as 16-bit signed integers.
         //
         // The largest packet in which we can store this structure is DATA96,
         // where the payload is 96 bytes long. The first byte of the payload is
         // reserved for the packet type. The fields above take up an additional
         // 11 bytes, so we have 84 bytes for the points themselves. We need
         // 4 bytes per point, so we can store at most 21 points.
-        int16_t points[2];
     } simple_geofence_setup_header_t;
 
     typedef struct PACKED {

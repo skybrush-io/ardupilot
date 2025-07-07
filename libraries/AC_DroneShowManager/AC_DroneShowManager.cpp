@@ -186,6 +186,7 @@ bool AC_DroneShowManager::configure_show_coordinate_system(
     _params.origin_amsl_mm.set_and_save(amsl_mm);
     _params.orientation_deg.set_and_save(orientation_deg);
 
+#if HAL_LOGGING_ENABLED
     // Log the new values
     AP_Logger *logger = AP_Logger::get_singleton();
     if (logger != nullptr) {
@@ -194,6 +195,7 @@ bool AC_DroneShowManager::configure_show_coordinate_system(
         logger->Write_Parameter("SHOW_ORIGIN_AMSL", static_cast<float>(amsl_mm));
         logger->Write_Parameter("SHOW_ORIENTATION", static_cast<float>(orientation_deg));
     }
+#endif
 
     return true;
 }
@@ -618,7 +620,7 @@ MAV_RESULT AC_DroneShowManager::handle_command_int_packet(const mavlink_command_
     }
 }
 
-bool AC_DroneShowManager::handle_message(const mavlink_message_t& msg)
+bool AC_DroneShowManager::handle_message(mavlink_channel_t chan, const mavlink_message_t& msg)
 {
     switch (msg.msgid)
     {
@@ -626,16 +628,16 @@ bool AC_DroneShowManager::handle_message(const mavlink_message_t& msg)
         // We do not distinguish between them because MAVLink2 truncates the
         // trailing zeros anyway.
         case MAVLINK_MSG_ID_DATA16:
-            return _handle_data16_message(msg);
+            return _handle_data16_message(chan, msg);
 
         case MAVLINK_MSG_ID_DATA32:
-            return _handle_data32_message(msg);
+            return _handle_data32_message(chan, msg);
 
         case MAVLINK_MSG_ID_DATA64:
-            return _handle_data64_message(msg);
+            return _handle_data64_message(chan, msg);
 
         case MAVLINK_MSG_ID_DATA96:
-            return _handle_data96_message(msg);
+            return _handle_data96_message(chan, msg);
 
         case MAVLINK_MSG_ID_LED_CONTROL:
             // The drone show LED listens on the "secret" LED ID 42 with a
@@ -810,7 +812,7 @@ void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) c
 
     mavlink_msg_data16_send(
         chan,
-        CustomPackets::DRONE_TO_GCS,   // Skybrush status packet type marker
+        CustomPackets::DRONE_TO_GCS_STATUS,   // Skybrush status packet type marker
         14,     // effective packet length
         packet
     );
@@ -930,8 +932,10 @@ void AC_DroneShowManager::_clear_start_time_if_set_by_switch()
     }
  }
 
-bool AC_DroneShowManager::_handle_custom_data_message(uint8_t type, void* data, uint8_t length)
+bool AC_DroneShowManager::_handle_custom_data_message(mavlink_channel_t chan, uint8_t type, void* data, uint8_t length)
 {
+    uint8_t reply[16];
+    
     if (data == nullptr) {
         return false;
     }
@@ -995,50 +999,101 @@ bool AC_DroneShowManager::_handle_custom_data_message(uint8_t type, void* data, 
                         crtl_trigger->start_time * 1000 /* [s] --> [msec] */
                     );
                 }
+
+                return true;
+            }
+            break;
+
+        // Configure geofences with a single call
+        case CustomPackets::SIMPLE_GEOFENCE_SETUP:
+            if (length >= sizeof(CustomPackets::simple_geofence_setup_header_t)) {
+                CustomPackets::simple_geofence_setup_header_t* geofence_setup = static_cast<CustomPackets::simple_geofence_setup_header_t*>(data);
+                DroneShow_FenceConfig fence_config;
+                CustomPackets::acknowledgment_t* ack_packet = reinterpret_cast<CustomPackets::acknowledgment_t*>(reply + 1);
+                size_t points_payload_length_in_bytes = length - sizeof(CustomPackets::simple_geofence_setup_header_t);
+                size_t num_points = points_payload_length_in_bytes / sizeof(DroneShow_FencePoint);
+                MAV_RESULT result = MAV_RESULT_FAILED;
+
+                // Convert from geofence_setup to fence_config
+                fence_config.max_altitude_dm = geofence_setup->max_altitude_dm;
+                fence_config.radius_dm = geofence_setup->radius_dm;
+                fence_config.action = geofence_setup->flags & 0x0f;
+                fence_config.num_points = geofence_setup->num_points;
+                fence_config.points = reinterpret_cast<DroneShow_FencePoint*>(
+                    reinterpret_cast<uint8_t*>(geofence_setup) +
+                    sizeof(CustomPackets::simple_geofence_setup_header_t)
+                );
+                if (fence_config.num_points <= num_points) {
+                    result = configure_fences(fence_config) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+                }
+
+                // Prepare the reply packet
+                memset(reply, 0, sizeof(reply));
+                reply[0] = CustomPackets::ACKNOWLEDGMENT;
+                ack_packet->ack_token = geofence_setup->ack_token;
+                ack_packet->result = result;
+
+                // Send the reply packet
+                mavlink_msg_data16_send(
+                    chan,
+                    CustomPackets::DRONE_TO_GCS,   // Skybrush status packet type marker
+                    sizeof(CustomPackets::acknowledgment_t),     // effective packet length
+                    reply
+                );
+
+                return true;
+            }
+            break;
+
+        // Acknowledgment packets; these can be ignored (but we still return
+        // true as we do not want any other handlers to handle them)
+        case CustomPackets::ACKNOWLEDGMENT:
+            if (length >= sizeof(CustomPackets::acknowledgment_t)) {
+                return true;
             }
     }
 
     return false;
 }
 
-bool AC_DroneShowManager::_handle_data16_message(const mavlink_message_t& msg)
+bool AC_DroneShowManager::_handle_data16_message(mavlink_channel_t chan, const mavlink_message_t& msg)
 {
     mavlink_data16_t packet;
     mavlink_msg_data16_decode(&msg, &packet);
     if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
-    return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
+    return _handle_custom_data_message(chan, packet.data[0], packet.data + 1, packet.len - 1);
 }
 
-bool AC_DroneShowManager::_handle_data32_message(const mavlink_message_t& msg)
+bool AC_DroneShowManager::_handle_data32_message(mavlink_channel_t chan, const mavlink_message_t& msg)
 {
     mavlink_data32_t packet;
     mavlink_msg_data32_decode(&msg, &packet);
     if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
-    return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
+    return _handle_custom_data_message(chan, packet.data[0], packet.data + 1, packet.len - 1);
 }
 
-bool AC_DroneShowManager::_handle_data64_message(const mavlink_message_t& msg)
+bool AC_DroneShowManager::_handle_data64_message(mavlink_channel_t chan, const mavlink_message_t& msg)
 {
     mavlink_data64_t packet;
     mavlink_msg_data64_decode(&msg, &packet);
     if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
-    return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
+    return _handle_custom_data_message(chan, packet.data[0], packet.data + 1, packet.len - 1);
 }
 
-bool AC_DroneShowManager::_handle_data96_message(const mavlink_message_t& msg)
+bool AC_DroneShowManager::_handle_data96_message(mavlink_channel_t chan, const mavlink_message_t& msg)
 {
     mavlink_data96_t packet;
     mavlink_msg_data96_decode(&msg, &packet);
     if (packet.type != CustomPackets::GCS_TO_DRONE || packet.len < 1) {
         return false;
     }
-    return _handle_custom_data_message(packet.data[0], packet.data + 1, packet.len - 1);
+    return _handle_custom_data_message(chan, packet.data[0], packet.data + 1, packet.len - 1);
 }
 
 bool AC_DroneShowManager::_is_at_expected_position() const

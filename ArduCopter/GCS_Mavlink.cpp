@@ -1533,7 +1533,7 @@ void GCS_MAVLINK_Copter::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_DATA64:
     case MAVLINK_MSG_ID_DATA96:
     case MAVLINK_MSG_ID_LED_CONTROL:
-        if (!copter.g2.drone_show_manager.handle_message(msg)) {
+        if (!copter.g2.drone_show_manager.handle_message(chan, msg)) {
             // also make sure to keep the original behaviour
             GCS_MAVLINK::handle_message(msg);
         }

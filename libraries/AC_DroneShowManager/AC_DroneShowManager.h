@@ -17,6 +17,7 @@
 #include <skybrush/colors.h>
 
 #include "DroneShow_Enums.h"
+#include "DroneShow_FenceConfig.h"
 
 struct sb_trajectory_s;
 struct sb_trajectory_player_s;
@@ -170,6 +171,9 @@ public:
     // This function is a no-op if the drone show is not in the "waiting for
     // start time" phase and 'force' is set to false.
     bool clear_scheduled_start_time(bool force = false);
+
+    // Configures all relevant geofences of the show with a single call.
+    bool configure_fences(DroneShow_FenceConfig& config) WARN_IF_UNUSED;
 
     // Configures the show origin, orientation and AMSL reference in a single
     // call. This function sets the corresponding SHOW_ parameters as if they
@@ -336,7 +340,7 @@ public:
     MAV_RESULT handle_command_int_packet(const mavlink_command_int_t &packet);
 
     // Handles a MAVLink message forwarded to the drone show manager by the central MAVLink handler
-    bool handle_message(const mavlink_message_t& msg) WARN_IF_UNUSED;
+    bool handle_message(mavlink_channel_t chan, const mavlink_message_t& msg) WARN_IF_UNUSED;
 
     // Asks the drone show manager to schedule a start as soon as possible if
     // the show is not running yet, assuming that the signal was sent from the
@@ -812,19 +816,19 @@ private:
     uint32_t _get_gps_synced_timestamp_in_millis_for_lights() const;
 
     // Handles a generic MAVLink DATA* message from the ground station.
-    bool _handle_custom_data_message(uint8_t type, void* data, uint8_t length);
+    bool _handle_custom_data_message(mavlink_channel_t chan, uint8_t type, void* data, uint8_t length);
 
     // Handles a MAVLink DATA16 message from the ground station.
-    bool _handle_data16_message(const mavlink_message_t& msg);
+    bool _handle_data16_message(mavlink_channel_t chan, const mavlink_message_t& msg);
 
     // Handles a MAVLink DATA32 message from the ground station.
-    bool _handle_data32_message(const mavlink_message_t& msg);
+    bool _handle_data32_message(mavlink_channel_t chan, const mavlink_message_t& msg);
 
     // Handles a MAVLink DATA64 message from the ground station.
-    bool _handle_data64_message(const mavlink_message_t& msg);
+    bool _handle_data64_message(mavlink_channel_t chan, const mavlink_message_t& msg);
 
     // Handles a MAVLink DATA96 message from the ground station.
-    bool _handle_data96_message(const mavlink_message_t& msg);
+    bool _handle_data96_message(mavlink_channel_t chan, const mavlink_message_t& msg);
 
     // Handles a MAVLink LED_CONTROL message from the ground station.
     bool _handle_led_control_message(const mavlink_message_t& msg);
