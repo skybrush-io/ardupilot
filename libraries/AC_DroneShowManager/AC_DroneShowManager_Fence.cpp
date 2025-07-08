@@ -77,7 +77,6 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
             // Note that the show coordinate system is not necessarily valid
             // at this point because it is updated only at takeoff.
             _tentative_show_coordinate_system.convert_show_to_global_coordinate(vec, loc);
-            gcs().send_text(MAV_SEVERITY_INFO, "Point: %d %d %d %d", config.points[i].x_dm, config.points[i].y_dm, loc.lat, loc.lng);
 
             memset(&items[i], 0, sizeof(AC_PolyFenceItem));
             items[i].type = AC_PolyFenceType::POLYGON_INCLUSION;
@@ -135,5 +134,5 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
     }
 #endif
 
-    return false;
+    return true;
 }
