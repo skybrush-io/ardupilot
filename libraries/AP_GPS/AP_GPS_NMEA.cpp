@@ -81,6 +81,73 @@ bool AP_GPS_NMEA::read(void)
  */
 bool AP_GPS_NMEA::_decode(char c)
 {
+    // Zustandmaschine für Allystar-Binärnachrichten
+    switch (_allystar_parse_state) {
+    case AllystarParseState::IDLE:
+        if ((uint8_t)c == 0xF1) {
+            _allystar_parse_state = AllystarParseState::GOT_SYNC1;
+            // NMEA-Parsing für diesen Charakter überspringen
+            return false;
+        }
+        break; // Zurück zum NMEA-Parsing
+    case AllystarParseState::GOT_SYNC1:
+        if ((uint8_t)c == 0xD9) {
+            _allystar_parse_state = AllystarParseState::GOT_MSG_CLASS;
+            _allystar_sum_a = 0;
+            _allystar_sum_b = 0;
+        } else {
+            _allystar_parse_state = AllystarParseState::IDLE;
+        }
+        return false;
+    case AllystarParseState::GOT_MSG_CLASS:
+        _allystar_msg_class = (uint8_t)c;
+        _allystar_sum_a += c; _allystar_sum_b += _allystar_sum_a;
+        _allystar_parse_state = AllystarParseState::GOT_MSG_ID;
+        return false;
+    case AllystarParseState::GOT_MSG_ID:
+        _allystar_msg_id = (uint8_t)c;
+        _allystar_sum_a += c; _allystar_sum_b += _allystar_sum_a;
+        _allystar_parse_state = AllystarParseState::GOT_LENGTH1;
+        return false;
+    case AllystarParseState::GOT_LENGTH1:
+        _allystar_payload_length = (uint8_t)c;
+        _allystar_sum_a += c; _allystar_sum_b += _allystar_sum_a;
+        _allystar_parse_state = AllystarParseState::GOT_LENGTH2;
+        return false;
+    case AllystarParseState::GOT_LENGTH2:
+        _allystar_payload_length |= (uint16_t)((uint8_t)c) << 8;
+        _allystar_sum_a += c; _allystar_sum_b += _allystar_sum_a;
+        if (_allystar_payload_length > ALLYSTAR_BUFFER_SIZE) {
+            _allystar_parse_state = AllystarParseState::IDLE;
+        } else if (_allystar_payload_length > 0) {
+            _allystar_payload_counter = 0;
+            _allystar_parse_state = AllystarParseState::IN_PAYLOAD;
+        } else {
+            _allystar_parse_state = AllystarParseState::IN_CHECKSUM1;
+        }
+        return false;
+    case AllystarParseState::IN_PAYLOAD:
+        _allystar_buffer[_allystar_payload_counter++] = (uint8_t)c;
+        _allystar_sum_a += c; _allystar_sum_b += _allystar_sum_a;
+        if (_allystar_payload_counter >= _allystar_payload_length) {
+            _allystar_parse_state = AllystarParseState::IN_CHECKSUM1;
+        }
+        return false;
+    case AllystarParseState::IN_CHECKSUM1:
+        _allystar_ck_a = (uint8_t)c;
+        _allystar_parse_state = AllystarParseState::IN_CHECKSUM2;
+        return false;
+    case AllystarParseState::IN_CHECKSUM2:
+        _allystar_ck_b = (uint8_t)c;
+        bool parsed = false;
+        if (_allystar_sum_a == _allystar_ck_a && _allystar_sum_b == _allystar_ck_b) {
+            parsed = _allystar_binary_packet_complete();
+        }
+        _allystar_parse_state = AllystarParseState::IDLE;
+        return parsed;
+    }
+
+    // Original-NMEA-Parsing-Logik
     _sentence_length++;
         
     switch (c) {
@@ -395,30 +462,6 @@ bool AP_GPS_NMEA::_term_complete()
                 // HDT sentence.
                 state.gps_yaw_configured = true;
                 break;
-            case _GPS_SENTENCE_PHD:
-                if (_last_AGRICA_ms != 0) {
-                    // prefer AGRICA
-                    break;
-                }
-                if (_phd.msg_id == 12) {
-                    state.velocity.x = _phd.fields[0] * 0.01;
-                    state.velocity.y = _phd.fields[1] * 0.01;
-                    state.velocity.z = _phd.fields[2] * 0.01;
-                    state.have_vertical_velocity = true;
-                    _last_vvelocity_ms = now;
-                    // we prefer a true 3D velocity when available
-                    velocity_to_speed_course(state);
-                    _last_3D_velocity_ms = now;
-                } else if (_phd.msg_id == 26) {
-                    state.horizontal_accuracy = MAX(_phd.fields[0],_phd.fields[1]) * 0.001;
-                    state.have_horizontal_accuracy = true;
-                    state.vertical_accuracy = _phd.fields[2] * 0.001;
-                    state.have_vertical_accuracy = true;
-                    state.speed_accuracy = MAX(_phd.fields[3],_phd.fields[4]) * 0.001;
-                    state.have_speed_accuracy = true;
-                    _last_vaccuracy_ms = now;
-                }
-                break;
             case _GPS_SENTENCE_KSXT:
                 if (_last_AGRICA_ms != 0 || _expect_agrica) {
                     // prefer AGRICA
@@ -518,13 +561,6 @@ bool AP_GPS_NMEA::_term_complete()
 
     // the first term determines the sentence type
     if (_term_number == 0) {
-        /*
-          special case for $PHD message
-         */
-        if (strcmp(_term, "PHD") == 0) {
-            _sentence_type = _GPS_SENTENCE_PHD;
-            return false;
-        }
         if (strcmp(_term, "KSXT") == 0) {
             _sentence_type = _GPS_SENTENCE_KSXT;
             return false;
@@ -642,18 +678,6 @@ bool AP_GPS_NMEA::_term_complete()
             _new_course = _parse_decimal_100(_term);
             break;
 
-        case _GPS_SENTENCE_PHD + 1: // PHD class
-            _phd.msg_class = atol(_term);
-            break;
-        case _GPS_SENTENCE_PHD + 2: // PHD message
-            _phd.msg_id = atol(_term);
-            break;
-        case _GPS_SENTENCE_PHD + 5: // PHD message, itow
-            _phd.itow = strtoul(_term, nullptr, 10);
-            break;
-        case _GPS_SENTENCE_PHD + 6 ... _GPS_SENTENCE_PHD + 11: // PHD message, fields
-            _phd.fields[_term_number-6] = atol(_term);
-            break;
         case _GPS_SENTENCE_KSXT + 1 ... _GPS_SENTENCE_KSXT + 22: // KSXT message, fields
             _ksxt.fields[_term_number-1] = atof(_term);
             break;
@@ -897,10 +921,15 @@ void AP_GPS_NMEA::send_config(void)
         break;
     }
 
-    case AP_GPS::GPS_TYPE_ALLYSTAR:
-        nmea_printf(port, "$PHD,06,42,UUUUTTTT,BB,0,%u,55,0,%u,0,0,0",
-                    unsigned(rate_hz), unsigned(rate_ms));
+    case AP_GPS::GPS_TYPE_ALLYSTAR: {
+        // Poll-Anfrage für die binäre NAV-PVERR-Nachricht senden (ID 0x01 0x26)
+        // Format: Sync(2) + Class(1) + ID(1) + Length(2) + Payload(0) + Checksum(2)
+        // Checksum wird über Class, ID und Length berechnet.
+        // F1 D9 01 26 00 00 27 76
+        const uint8_t poll_req[] = {0xF1, 0xD9, 0x01, 0x26, 0x00, 0x00, 0x27, 0x76};
+        port->write(poll_req, sizeof(poll_req));
         break;
+    }
 
     default:
         break;
@@ -930,8 +959,8 @@ bool AP_GPS_NMEA::is_healthy(void) const
         return _last_yaw_ms != 0;
 
     case AP_GPS::GPS_TYPE_ALLYSTAR:
-        // we should get vertical velocity and accuracy from PHD
-        return _last_vvelocity_ms != 0 && _last_vaccuracy_ms != 0;
+        // we should get velocity and accuracy from NAV-PVERR
+        return _last_vaccuracy_ms != 0;
 
     default:
         break;
@@ -972,5 +1001,50 @@ void AP_GPS_NMEA::Write_AP_Logger_Log_Startup_messages() const
 #endif
 }
 #endif
+
+// Korrigierte Funktion, um das Alignment-Problem zu beheben und Syntaxfehler zu entfernen
+bool AP_GPS_NMEA::_allystar_binary_packet_complete()
+{
+    // Prüfen, ob es sich um die NAV-PVERR-Nachricht handelt (ID 0x01 0x26)
+    if (_allystar_msg_class == 0x01 && _allystar_msg_id == 0x26) {
+        // NAV-PVERR hat eine Nutzlast von 28 Bytes
+        // 7 x U4-Felder (iTOW, lat, lon, alt, velN, velE, velU Stdevs)
+        if (_allystar_payload_length != 28) {
+            return false;
+        }
+
+        // Nutzlast sicher mit memcpy parsen, um Alignment-Fehler zu vermeiden
+        uint32_t lat_std_mm, lon_std_mm, alt_std_mm, velN_std_mms, velE_std_mms;
+        memcpy(&lat_std_mm, &_allystar_buffer[4], sizeof(uint32_t));
+        memcpy(&lon_std_mm, &_allystar_buffer[8], sizeof(uint32_t));
+        memcpy(&alt_std_mm, &_allystar_buffer[12], sizeof(uint32_t));
+        memcpy(&velN_std_mms, &_allystar_buffer[16], sizeof(uint32_t));
+        memcpy(&velE_std_mms, &_allystar_buffer[20], sizeof(uint32_t));
+
+        // ArduCopter-Status aktualisieren
+        const float lat_std_m = lat_std_mm / 1000.0f;
+        const float lon_std_m = lon_std_mm / 1000.0f;
+
+        state.horizontal_accuracy = MAX(lat_std_m, lon_std_m);
+        state.have_horizontal_accuracy = true;
+        
+        state.vertical_accuracy = alt_std_mm / 1000.0f;
+        state.have_vertical_accuracy = true;
+        
+        const float velN_std_ms = velN_std_mms / 1000.0f;
+        const float velE_std_ms = velE_std_mms / 1000.0f;
+        state.speed_accuracy = sqrtf(sq(velN_std_ms) + sq(velE_std_ms));
+        state.have_speed_accuracy = true;
+        
+        _last_vaccuracy_ms = AP_HAL::millis();
+
+        // Überprüfen, ob wir auf eine Nachricht mit Geschwindigkeitsgenauigkeit gewartet haben
+        if (_last_vaccuracy_ms != 0) {
+             return _have_new_message();
+        }
+    }
+    
+    return false;
+}
 
 #endif // AP_GPS_NMEA_ENABLED

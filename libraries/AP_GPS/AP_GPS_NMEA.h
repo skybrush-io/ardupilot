@@ -83,7 +83,6 @@ private:
         _GPS_SENTENCE_GGA = 64,
         _GPS_SENTENCE_VTG = 96,
         _GPS_SENTENCE_HDT = 128,
-        _GPS_SENTENCE_PHD = 138, // extension for AllyStar GPS modules
         _GPS_SENTENCE_THS = 160, // True heading with quality indicator, available on Trimble MB-Two
         _GPS_SENTENCE_KSXT = 170, // extension for Unicore, 21 fields
         _GPS_SENTENCE_AGRICA = 193, // extension for Unicore, 65 fields
@@ -146,6 +145,32 @@ private:
 #endif
 #endif
 
+    // Hinzugefügte Member für den Allystar-Binär-Parser
+    enum class AllystarParseState {
+        IDLE,
+        GOT_SYNC1,
+        GOT_MSG_CLASS,
+        GOT_MSG_ID,
+        GOT_LENGTH1,
+        GOT_LENGTH2,
+        IN_PAYLOAD,
+        IN_CHECKSUM1,
+        IN_CHECKSUM2
+    } _allystar_parse_state = AllystarParseState::IDLE;
+
+    uint8_t _allystar_msg_class;
+    uint8_t _allystar_msg_id;
+    uint16_t _allystar_payload_length;
+    uint16_t _allystar_payload_counter;
+    uint8_t _allystar_ck_a;
+    uint8_t _allystar_ck_b;
+    uint8_t _allystar_sum_a;
+    uint8_t _allystar_sum_b;
+    static const uint16_t ALLYSTAR_BUFFER_SIZE = 128;
+    uint8_t _allystar_buffer[ALLYSTAR_BUFFER_SIZE];
+
+    bool _allystar_binary_packet_complete();
+
 
     uint8_t _parity;                                                    ///< NMEA message checksum accumulator
     uint32_t _crc32;                                            ///< CRC for unicore messages
@@ -194,25 +219,6 @@ private:
     //@}
 
     static const char _initialisation_blob[];
-
-    /*
-      the $PHD message is an extension from AllyStar that gives
-      vertical velocity and more accuracy estimates. It is designed as
-      a mapping from ublox UBX protocol messages to NMEA. So class 1,
-      message 12 is a mapping to NMEA of the NAV-VELNED UBX message
-      and contains the same fields. Class 1 message 26 is called
-      "NAV-PVERR", but does not correspond to a UBX message
-
-      example:
-        $PHD,01,12,TIIITTITT,,245808000,0,0,0,0,0,10260304,0,0*27
-        $PHD,01,26,TTTTTTT,,245808000,877,864,1451,11,11,17*17
-     */
-    struct {
-        uint8_t msg_class;
-        uint8_t msg_id;
-        uint32_t itow;
-        int32_t fields[8];
-    } _phd;
 
     /*
       The KSXT message is an extension from Unicore that gives 3D velocity and yaw
@@ -273,4 +279,3 @@ private:
 #endif
 
 #endif // AP_GPS_NMEA_ENABLED
-
