@@ -78,11 +78,11 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
             // at this point because it is updated only at takeoff.
             _tentative_show_coordinate_system.convert_show_to_global_coordinate(vec, loc);
 
-            memset(&items[i], 0, sizeof(AC_PolyFenceItem));
             items[i].type = AC_PolyFenceType::POLYGON_INCLUSION;
             items[i].loc.x = loc.lat;
             items[i].loc.y = loc.lng;
             items[i].vertex_count = config.num_points;
+            items[i].radius = 0.0f;
         }
 
         AC_PolyFence_loader &poly_loader = AP::fence()->polyfence();
