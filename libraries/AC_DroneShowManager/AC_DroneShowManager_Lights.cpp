@@ -528,7 +528,7 @@ void AC_DroneShowManager::_update_lights()
     if (
         has_failsafe_color &&
         AP_Notify::flags.flying &&
-        (_params.show_options & DroneShowOptionFlag.DroneShowOption_DisableFailsafeLights)
+        (_params.show_options & DroneShowOption_DisableFailsafeLights)
     ) {
         color = Colors::BLACK;
     }
