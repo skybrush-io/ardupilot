@@ -238,6 +238,7 @@ void AC_DroneShowManager::_update_lights()
     sb_rgb_color_t color = Colors::BLACK;
     bool light_signal_affected_by_brightness_setting = true;
     bool enhance_brightness = false;
+    bool has_failsafe_color = false;
     int brightness = _params.preflight_light_signal_brightness;
     uint8_t pattern = 0b11111111;
     const uint8_t BLINK = 0b11110000;
@@ -342,11 +343,13 @@ void AC_DroneShowManager::_update_lights()
         // reviewed regularly to see if these are still applicable.
         color = Colors::RED;
         pattern = BLINK;
+        has_failsafe_color = true;
     } else if (bubble_fence.is_breached() && bubble_fence.should_flash_leds()) {
         // If the drone is outside the bubble fence, flash red, full brightness
         light_signal_affected_by_brightness_setting = false;
         color = Colors::RED;
         pattern = FLASH_FOUR_TIMES_PER_SECOND;
+        has_failsafe_color = true;
     } else if (AP_Notify::flags.flying) {
         uint32_t mode = gcs().custom_mode();
 
@@ -357,9 +360,11 @@ void AC_DroneShowManager::_update_lights()
             // If we are flying and we are in RTL or smart RTL mode, blink with orange color
             color = Colors::ORANGE;
             pattern = BLINK;
+            has_failsafe_color = true;
         } else if (IS_LANDING(mode)) {
             // If we are flying and we are in landing mode, show a solid orange color
             color = Colors::ORANGE;
+            has_failsafe_color = true;
         } else if (mode == MODE_DRONE_SHOW) {
             // If we are flying in drone show mode, show the color that we are
             // supposed to show during the drone show if the show has started.
@@ -370,6 +375,7 @@ void AC_DroneShowManager::_update_lights()
             if (_stage_in_drone_show_mode == DroneShow_Error) {
                 color = Colors::RED;
                 pattern = BLINK;
+                has_failsafe_color = true;
             } else if (_stage_in_drone_show_mode == DroneShow_Loiter) {
                 color = Colors::WHITE;
             } else {
@@ -516,6 +522,15 @@ void AC_DroneShowManager::_update_lights()
             color.green = color.green * brightness_scaler;
             color.blue = color.blue * brightness_scaler;
         }
+    }
+
+    // Turn off the failsafe lights in the air if that configuration option is set
+    if (
+        has_failsafe_color &&
+        AP_Notify::flags.flying &&
+        (_params.show_options & DroneShowOptionFlag.DroneShowOption_DisableFailsafeLights)
+    ) {
+        color = Colors::BLACK;
     }
 
     _last_rgb_led_color = color;

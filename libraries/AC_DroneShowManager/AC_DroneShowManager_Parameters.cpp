@@ -296,7 +296,14 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("PYRO_ITIME", 36, AC_DroneShowManager, _params.pyro_spec.ignition_duration_msec, 3000),
 
-    // Currently used max parameter ID: 36; update this if you add more parameters.
+    // @Param: OPTIONS
+    // @DisplayName: Show flight mode options
+    // @Description: General options related to the show flight mode
+    // @Bitmask: 0:Disable failsafe lights
+    // @User: Advanced
+    AP_GROUPINFO("OPTIONS", 37, AC_DroneShowManager, _params.show_options, 0),
+
+    // Currently used max parameter ID: 37; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND

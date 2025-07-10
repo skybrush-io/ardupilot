@@ -611,6 +611,10 @@ private:
 
         // Action to take at the end of the show
         AP_Int8 post_action;
+
+        // General options related to the show flight mode. See the values from
+        // the DroneShowOptionFlag enum for more details.
+        AP_Int8 show_options;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
