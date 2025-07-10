@@ -255,8 +255,8 @@ void AC_DroneShowManager::_update_lights()
 )
 
 #define IS_LANDED(mode) (  \
-    mode == MODE_LAND ||    \
-    (mode == MODE_DRONE_SHOW && _stage_in_drone_show_mode == DroneShow_Landed) \
+    !AP_Notify::flags.flying && (mode == MODE_LAND || \
+    (mode == MODE_DRONE_SHOW && _stage_in_drone_show_mode == DroneShow_Landed)) \
 )
 
 #define IS_RTL(mode) (        \
@@ -560,6 +560,7 @@ void AC_DroneShowManager::_update_lights()
 #endif
 
 #undef IS_LANDING
+#undef IS_LANDED
 #undef IS_RTL
 
 }
