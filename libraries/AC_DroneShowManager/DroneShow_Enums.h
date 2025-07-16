@@ -20,7 +20,7 @@ enum DroneShowModeStage {
     DroneShow_TestingLights,
 };
 
-// Enum representing the flags in the control mode bitmasp
+// Enum representing the flags in the control mode bitmap
 enum DroneShowControlModeFlag {
     DroneShowControl_VelocityControlEnabled = 1,
     DroneShowControl_AccelerationControlEnabled = 2,
@@ -100,4 +100,9 @@ enum DroneShowEventResult : uint8_t {
     DroneShowEventResult_NotSupported = 2, // Event type not supported
     DroneShowEventResult_Unsafe = 3, // Event not executed due to safety reasons
     DroneShowEventResult_TimeMissed = 4, // Event not executed because the time was missed
+};
+
+// Enum representing the flags in the drone show option bitmap
+enum DroneShowOptionFlag {
+    DroneShowOption_DisableFailsafeLights = 1,
 };
