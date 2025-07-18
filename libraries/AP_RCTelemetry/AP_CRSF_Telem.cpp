@@ -113,7 +113,14 @@ void AP_CRSF_Telem::setup_custom_telemetry()
         return;
     }
 
+    // we need crossfire firmware version
+    if (_crsf_version.pending) {
+        return;
+    }
+
     if (!rc().option_is_enabled(RC_Channels::Option::CRSF_CUSTOM_TELEMETRY)) {
+       _custom_telem.init_done = true;
+        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG,"%s: bootstrap complete, fw %d.%02d", get_protocol_string(), _crsf_version.major, _crsf_version.minor);
         return;
     }
 
@@ -123,11 +130,6 @@ void AP_CRSF_Telem::setup_custom_telemetry()
         GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s: passthrough telemetry conflict on SERIAL%d", get_protocol_string(), frsky_port);
        _custom_telem.init_done = true;
        return;
-    }
-
-    // we need crossfire firmware version
-    if (_crsf_version.pending) {
-        return;
     }
 
     AP_Frsky_SPort_Passthrough* passthrough = AP::frsky_passthrough_telem();
@@ -1002,7 +1004,7 @@ void AP_CRSF_Telem::calc_gps()
 
     _telem.bcast.gps.latitude = htobe32(loc.lat);
     _telem.bcast.gps.longitude = htobe32(loc.lng);
-    _telem.bcast.gps.groundspeed = htobe16(roundf(AP::gps().ground_speed() * 100000 / 3600));
+    _telem.bcast.gps.groundspeed = htobe16(roundf(AP::gps().ground_speed() * 36.0f));
     _telem.bcast.gps.altitude = htobe16(constrain_int16(loc.alt / 100, 0, 5000) + 1000);
     _telem.bcast.gps.gps_heading = htobe16(roundf(AP::gps().ground_course() * 100.0f));
     _telem.bcast.gps.satellites = AP::gps().num_sats();

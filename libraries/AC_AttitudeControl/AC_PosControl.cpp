@@ -64,7 +64,7 @@ extern const AP_HAL::HAL& hal;
  # define POSCONTROL_POS_XY_P                   1.0f    // horizontal position controller P gain default
  # define POSCONTROL_VEL_XY_P                   2.0f    // horizontal velocity controller P gain default
  # define POSCONTROL_VEL_XY_I                   1.0f    // horizontal velocity controller I gain default
- # define POSCONTROL_VEL_XY_D                   0.5f    // horizontal velocity controller D gain default
+ # define POSCONTROL_VEL_XY_D                   0.25f   // horizontal velocity controller D gain default
  # define POSCONTROL_VEL_XY_IMAX                1000.0f // horizontal velocity controller IMAX gain default
  # define POSCONTROL_VEL_XY_FILT_HZ             5.0f    // horizontal velocity controller input filter
  # define POSCONTROL_VEL_XY_FILT_D_HZ           5.0f    // horizontal velocity controller input filter for D
@@ -678,6 +678,7 @@ void AC_PosControl::update_xy_controller()
 
     // add velocity feed-forward scaled to compensate for optical flow measurement induced EKF noise
     vel_target *= ahrsControlScaleXY;
+    vel_target *= _xy_control_scale_factor;
 
     _vel_target.xy() = vel_target;
     _vel_target.xy() += _vel_desired.xy() + _vel_offset.xy();
@@ -693,6 +694,9 @@ void AC_PosControl::update_xy_controller()
     
     // acceleration to correct for velocity error and scale PID output to compensate for optical flow measurement induced EKF noise
     accel_target *= ahrsControlScaleXY;
+    accel_target *= _xy_control_scale_factor;
+
+    _xy_control_scale_factor = 1.0;
 
     // pass the correction acceleration to the target acceleration output
     _accel_target.xy() = accel_target;
