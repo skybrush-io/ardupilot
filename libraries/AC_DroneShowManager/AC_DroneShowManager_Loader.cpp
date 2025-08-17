@@ -233,7 +233,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
         }
         else if (retval)
         {
-            hal.console->printf("Error while lading yaw data: %d\n", (int) retval);
+            hal.console->printf("Error while loading yaw data: %d\n", (int) retval);
         }
         else
         {
