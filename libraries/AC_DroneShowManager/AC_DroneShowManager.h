@@ -144,6 +144,13 @@ public:
         }
     };
 
+    /// Specification of a telemetry request containing a message ID and a message
+    /// interval
+    struct TelemetryRequest {
+        uint32_t msg_id;
+        int32_t interval_usec;
+    };
+
     // Early initialization steps that have to be called early in the boot process
     // to ensure we have enough memory to do them even on low-memory boards like
     // a Pixhawk1
@@ -261,6 +268,12 @@ public:
     
     // Returns the last color that was emitted to the RGB light
     void get_last_rgb_led_color(sb_rgb_color_t& color) const { color = _last_rgb_led_color; }
+
+    // Returns the preferred set of telemetry messages at boot time.
+    // The result will be a pointer to a statically allocated array of pairs of
+    // message IDs and intervals, ending in an entry with the message ID set to
+    // zero, which marks the end of the list.
+    const TelemetryRequest* get_preferred_telemetry_messages() const;
 
     // Returns the landing time relative to the start of the show
     float get_relative_landing_time_sec() const { return _landing_time_sec; }

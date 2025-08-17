@@ -3,6 +3,19 @@
 #include "AC_DroneShowManager.h"
 #include "DroneShow_CustomPackets.h"
 
+static const AC_DroneShowManager::TelemetryRequest default_telemetry_streams[] = {
+    { MAVLINK_MSG_ID_DATA16, 500000 }, // drone show status, 2 Hz
+    { MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 500000 }, // global position, 2 Hz
+    { MAVLINK_MSG_ID_SYS_STATUS, 1000000 },  // system status, 1 Hz
+    { MAVLINK_MSG_ID_GPS_RAW_INT, 1000000 }, // raw GPS data, 1 Hz
+    { 0, 0 }                                  // End marker
+};
+
+const AC_DroneShowManager::TelemetryRequest* AC_DroneShowManager::get_preferred_telemetry_messages() const
+{
+    return default_telemetry_streams;
+}
+
 void AC_DroneShowManager::send_drone_show_status(const mavlink_channel_t chan) const
 {
     const AP_GPS& gps = AP::gps();
