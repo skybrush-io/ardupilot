@@ -772,6 +772,11 @@ protected:
     // methods to extract a Location object from a command_int
     bool location_from_command_t(const mavlink_command_int_t &in, Location &out);
 
+    // set the interval at which an ap_message should be emitted (in ms)
+    // Moved here from the private section in upstream code because we need to
+    // call it from GCS_MAVLink_Copter
+    bool set_ap_message_interval(enum ap_message id, uint16_t interval_ms);
+
 private:
 
     // define the two objects used for parsing incoming messages:
@@ -895,8 +900,6 @@ private:
     // try_send_message, will cause a mavlink message with that id to
     // be emitted.  Returns MSG_LAST if no such mapping exists.
     ap_message mavlink_id_to_ap_message_id(const uint32_t mavlink_id) const;
-    // set the interval at which an ap_message should be emitted (in ms)
-    bool set_ap_message_interval(enum ap_message id, uint16_t interval_ms);
     // call set_ap_message_interval for each entry in a stream,
     // the interval being based on the stream's rate
     void initialise_message_intervals_for_stream(GCS_MAVLINK::streams id);
@@ -904,8 +907,6 @@ private:
     void initialise_message_intervals_from_streamrates();
     // hook function to allow customization of message intervals in derived
     // classes.
-    // TODO(ntamas): migrate things to configuring stream rates from ROMFS
-    // instead using initialise_message_intervals_from_config_files()
     virtual void initialise_custom_message_intervals() {};
     // boolean that indicated that message intervals have been set
     // from streamrates:

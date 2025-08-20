@@ -14,6 +14,8 @@
 #include <AC_Fence/AC_Fence.h>
 #include <AC_WPNav/AC_WPNav.h>
 
+#include <GCS_MAVLink/ap_message.h>
+
 #include <skybrush/colors.h>
 
 #include "DroneShow_Enums.h"
@@ -147,8 +149,8 @@ public:
     /// Specification of a telemetry request containing a message ID and a message
     /// interval
     struct TelemetryRequest {
-        uint32_t msg_id;
-        int32_t interval_usec;
+        ap_message ap_msg_id;
+        uint16_t interval_msec;
     };
 
     // Early initialization steps that have to be called early in the boot process
@@ -476,8 +478,15 @@ public:
     // start time" phase.
     bool schedule_delayed_start_after(uint32_t delay_ms);
 
-    // Sends a drone show status message (wrapped in a DATA16 packet) on the given MAVLink channel
+    // Sends a drone show status message (wrapped in a DATA16 packet) on the given MAVLink channel.
+    // This is used by the legacy telemetry configuration where information from this packet must
+    // be augmented from GLOBAL_POSITION_INT and GPS_RAW_INT.
     void send_drone_show_status(const mavlink_channel_t chan) const;
+
+    // Sends an extended drone show status message (wrapped in a DATA64 packet) on the given MAVLink channel
+    // This is used by the compact telemetry configuration where this packet incorporates some parts of
+    // GLOBAL_POSITION_INT and GPS_RAW_INT so they do not need to be sent.
+    void send_extended_drone_show_status(const mavlink_channel_t chan) const;
 
     // Returns whether the drone should switch to show mode automatically
     // after boot if there is no RC input
@@ -628,6 +637,10 @@ private:
         // General options related to the show flight mode. See the values from
         // the DroneShowOptionFlag enum for more details.
         AP_Int8 show_options;
+
+        // Telemetry profile to use when determining the initial set of messages
+        // that a drone will send
+        AP_Int8 telemetry_profile;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -807,6 +820,18 @@ private:
     // Creates the directory in which the drone show specific files are stored
     // on the filesystem
     bool _create_show_directory();
+
+    // Fills the given buffer with basic drone show telemetry data and returns
+    // a pointer to after the last byte written into the buffer.
+    //
+    // This is a helper function to share the common bits between the standard
+    // and the extended drone show status packet. The two packets need to have
+    // an identical format for the initial segment because the GCS essentially
+    // treats them the same way (with the last bits being optional).
+    //
+    // The buffer must be large enough to hold the basic telemetry. A buffer
+    // with 16 bytes is enough.
+    uint8_t* _fill_drone_show_status_packet_buffer(uint8_t* buf) const;
 
     // Produces an internally triggered light signal that indicates a failed
     // operation (like a successful compass calibration)

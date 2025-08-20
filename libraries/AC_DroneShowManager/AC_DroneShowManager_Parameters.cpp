@@ -303,7 +303,15 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("OPTIONS", 37, AC_DroneShowManager, _params.show_options, 0),
 
-    // Currently used max parameter ID: 37; update this if you add more parameters.
+    // @Param: TEL_PROFILE
+    // @DisplayName: Telemetry profile
+    // @Description: Specifies the telemetry profile to use for the show. This controls which telemetry messages are sent with what frequency.
+    // @Values: 0:Standard, 1:Compact
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("TEL_PROFILE", 38, AC_DroneShowManager, _params.telemetry_profile, TelemetryProfile_Standard),
+
+    // Currently used max parameter ID: 38; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND

@@ -5,6 +5,16 @@
 
 #include "DroneShow_Enums.h"
 
+#define DRONE_SHOW_STATUS_BASIC_FIELDS \
+    int32_t start_time; \
+    uint16_t led_color; \
+    uint8_t flags; \
+    uint8_t flags2; \
+    uint8_t gps_health; \
+    uint8_t flags3; \
+    int16_t elapsed_time; \
+    uint8_t rtcm_counters[2]
+
 namespace CustomPackets {
     static const uint8_t START_CONFIG = 1;
     static const uint8_t CRTL_TRIGGER = 2;
@@ -14,6 +24,33 @@ namespace CustomPackets {
     static const uint8_t DRONE_TO_GCS_STATUS = 0x5b;
     static const uint8_t GCS_TO_DRONE = 0x5c;
     static const uint8_t DRONE_TO_GCS = 0x5d;
+
+    typedef struct PACKED {
+        DRONE_SHOW_STATUS_BASIC_FIELDS;
+    } drone_show_status_t;
+
+    typedef struct PACKED {
+        DRONE_SHOW_STATUS_BASIC_FIELDS;
+
+        /* Fields from GLOBAL_POSITION_INT */
+        int32_t lat;
+        int32_t lng;
+        int32_t alt;
+        int32_t relative_alt;
+        int16_t vx;
+        int16_t vy;
+        int16_t vz;
+        uint16_t hdg;
+
+        /* Fields from GPS_RAW_INT */
+        uint8_t gps_fix_type;
+        uint16_t gps_hdop;
+        uint16_t gps_vdop;
+
+        /* Show metadata */
+        uint32_t show_id;
+        uint16_t trajectory_index;    // zero-based, 0xFFFF means "not known"
+    } drone_show_extended_status_t;
 
     typedef struct PACKED {
         // Start time to set on the drone, in GPS time of week (sec). Anything
@@ -82,3 +119,11 @@ namespace CustomPackets {
     } acknowledgment_t;
 };
 
+static_assert(
+    sizeof(CustomPackets::drone_show_status_t) <= 16,
+    "standard status packet must fit in DATA16"
+);
+static_assert(
+    sizeof(CustomPackets::drone_show_extended_status_t) <= 96,
+    "extended status packet must fit in DATA96"
+);

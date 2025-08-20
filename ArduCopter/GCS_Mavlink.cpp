@@ -384,6 +384,14 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         break;
     }
 
+    case MSG_EXTENDED_DRONE_SHOW_STATUS: {
+#if MODE_DRONE_SHOW_ENABLED
+        CHECK_PAYLOAD_SIZE(DATA96);
+        copter.g2.drone_show_manager.send_extended_drone_show_status(chan);
+#endif
+        break;
+    }
+
     default:
         return GCS_MAVLINK::try_send_message(id);
     }
@@ -1696,8 +1704,8 @@ void GCS_MAVLINK_Copter::initialise_custom_message_intervals()
     // startup so the GCS does not have to spend time on setting it up.
     const AC_DroneShowManager::TelemetryRequest* request =
         copter.g2.drone_show_manager.get_preferred_telemetry_messages();
-    while (request && request->msg_id != 0) {
-        set_message_interval(request->msg_id, request->interval_usec);
+    while (request && request->ap_msg_id < MSG_LAST) {
+        set_ap_message_interval(request->ap_msg_id, request->interval_msec);
         request++;
     }
 #endif
