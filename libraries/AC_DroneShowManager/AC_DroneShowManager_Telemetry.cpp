@@ -87,7 +87,6 @@ void AC_DroneShowManager::send_extended_drone_show_status(const mavlink_channel_
 
     /* this bit is adapted from GCS_MAVLINK::send_mavlink_gps_raw() */
     AP_GPS &gps = AP::gps();
-    status->gps_fix_type = gps.status(0);
     status->gps_hdop = gps.get_hdop(0);
     status->gps_vdop = gps.get_vdop(0);
 

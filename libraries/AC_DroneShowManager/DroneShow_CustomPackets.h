@@ -43,12 +43,11 @@ namespace CustomPackets {
         uint16_t hdg;
 
         /* Fields from GPS_RAW_INT */
-        uint8_t gps_fix_type;
         uint16_t gps_hdop;
         uint16_t gps_vdop;
 
         /* Show metadata */
-        uint32_t show_id;
+        uint32_t show_id;  // zero means "not known"
         uint16_t trajectory_index;    // zero-based, 0xFFFF means "not known"
     } drone_show_extended_status_t;
 
