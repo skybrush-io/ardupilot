@@ -6,8 +6,9 @@
 #include "DroneShowPyroDevice.h"
 
 /**
- * Pyro device implementation that sends STATUSTEXT messages on all MAVLink
- * channels when a pyro event is encountered in the show sequence.
+ * Pyro device implementation that sets a single servo channel output to
+ * 85% or 100% when a pyro event is encountered in the show sequence on
+ * the first or second pyro channel.
  */
 class DroneShowPyroDevice_SingleServo : public DroneShowPyroDevice {
 public:
