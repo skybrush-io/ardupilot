@@ -43,7 +43,7 @@ uint8_t DroneShowPyroDevice_MultipleServos::num_channels() const
 
 DroneShowEventResult DroneShowPyroDevice_MultipleServos::fire_impl(uint8_t channel)
 {
-    // Turn om the ignition by setting the duty cycle to 100%
+    // Turn on the ignition by setting the duty cycle to 100%
     return set_duty_cycle_percentage(_servo_channels[channel], 100)
         ? DroneShowEventResult_Success
         : DroneShowEventResult_Failure;
