@@ -587,24 +587,6 @@ bool SRV_Channels::find_channel(SRV_Channel::Aux_servo_function_t function, uint
     return true;
 }
 
-// find all channels that a function is assigned to
-bool SRV_Channels::find_channels(SRV_Channel::Aux_servo_function_t function, uint32_t &channel_mask)
-{
-    // Must have populated channel masks
-    if (!initialised) {
-        update_aux_servo_function();
-    }
-
-    // Make sure function is valid
-    if (!SRV_Channel::valid_function(function)) {
-        return false;
-    }
-
-    channel_mask = functions[function].channel_mask;
-
-    return (bool)channel_mask;
-}
-
 /*
   get a pointer to first auxiliary channel for a channel function
 */
@@ -839,7 +821,7 @@ void SRV_Channels::set_angle(SRV_Channel::Aux_servo_function_t function, uint16_
         if (channels[i].function == function) {
             channels[i].set_angle(angle);
         }
-    }
+    }    
 }
 
 // call set_range() on matching channels
