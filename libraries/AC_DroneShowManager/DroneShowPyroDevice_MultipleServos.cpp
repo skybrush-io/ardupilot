@@ -11,16 +11,16 @@ bool DroneShowPyroDevice_MultipleServos::init_impl()
     uint32_t chans = _servo_channel_mask;
     uint8_t servo_channel;
 
-    _servo_channels.clear();
+    _num_servo_channels = 0;
 
-    while (chans) {
+    while (chans && _num_servo_channels < PYRO_MULTIPLE_SERVOS_MAX_CHANNELS) {
         servo_channel = __builtin_ffs(chans);
         chans &= chans - 1;
 
         if (servo_channel--) {
             hal.rcout->enable_ch(servo_channel);
             set_duty_cycle_percentage(servo_channel, 0);
-            _servo_channels.push_back(servo_channel);
+            _servo_channels[_num_servo_channels++] = servo_channel;
         }
     }
 
@@ -29,20 +29,23 @@ bool DroneShowPyroDevice_MultipleServos::init_impl()
 
 void DroneShowPyroDevice_MultipleServos::deinit_impl()
 {
-    for (uint8_t servo_channel : _servo_channels) {
-        set_duty_cycle_percentage(servo_channel, 0);
+    for (uint8_t i = 0; i < _num_servo_channels; i++) {
+        set_duty_cycle_percentage(_servo_channels[i], 0);
     }
 
-    _servo_channels.clear();
+    _num_servo_channels = 0;
 }
 
 uint8_t DroneShowPyroDevice_MultipleServos::num_channels() const
 {
-    return _servo_channels.size();
+    return _num_servo_channels;
 }
 
 DroneShowEventResult DroneShowPyroDevice_MultipleServos::fire_impl(uint8_t channel)
 {
+    if (channel >= _num_servo_channels)
+        return DroneShowEventResult_Failure;
+
     // Turn on the ignition by setting the duty cycle to 100%
     return set_duty_cycle_percentage(_servo_channels[channel], 100)
         ? DroneShowEventResult_Success
@@ -51,6 +54,9 @@ DroneShowEventResult DroneShowPyroDevice_MultipleServos::fire_impl(uint8_t chann
 
 DroneShowEventResult DroneShowPyroDevice_MultipleServos::off_impl(uint8_t channel)
 {
+    if (channel >= _num_servo_channels)
+        return DroneShowEventResult_Failure;
+
     // Turn off the ignition by setting the duty cycle to 0%
     return set_duty_cycle_percentage(_servo_channels[channel], 0)
         ? DroneShowEventResult_Success

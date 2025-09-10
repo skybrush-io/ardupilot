@@ -3,9 +3,8 @@
 /// @file   DroneShowPyroDevice_MultipleServos.h
 /// @brief  Pyrotechnic device that uses a separate servo output for all pyro channels to trigger pyro effects
 
-#include <vector>
-
 #include "DroneShowPyroDevice.h"
+#include "DroneShow_Constants.h"
 
 /**
  * Pyro device implementation that sets the predefined servo output on the
@@ -27,6 +26,7 @@ protected:
     bool set_duty_cycle_percentage(uint8_t servo_channel, uint8_t pct) const;
 
 private:
+    uint8_t _num_servo_channels;
+    uint8_t _servo_channels[PYRO_MULTIPLE_SERVOS_MAX_CHANNELS];
     uint32_t _servo_channel_mask;
-    std::vector<uint8_t> _servo_channels;
 };

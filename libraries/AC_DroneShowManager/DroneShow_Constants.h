@@ -52,6 +52,9 @@
 // Default minimum altitude for pyro events, in meters.
 #define DEFAULT_PYRO_MIN_ALTITUDE_METERS 20.0f
 
+// Maximum number of servo channels used by the pyro type MultipleServos.
+#define PYRO_MULTIPLE_SERVOS_MAX_CHANNELS 8
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 // UDP port that the drone show manager uses to broadcast the status of the RGB light
 // when compiled with the SITL simulator. Uncomment if you need it.
