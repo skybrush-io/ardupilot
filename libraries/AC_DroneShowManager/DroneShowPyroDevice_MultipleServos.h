@@ -4,7 +4,6 @@
 /// @brief  Pyrotechnic device that uses a separate servo output for all pyro channels to trigger pyro effects
 
 #include "DroneShowPyroDevice.h"
-#include "DroneShow_Constants.h"
 
 /**
  * Pyro device implementation that sets the predefined servo output on the
@@ -27,6 +26,6 @@ protected:
 
 private:
     uint8_t _num_servo_channels;
-    uint8_t _servo_channels[PYRO_MULTIPLE_SERVOS_MAX_CHANNELS];
+    uint8_t _servo_channels[8];
     uint32_t _servo_channel_mask;
 };

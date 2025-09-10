@@ -10,10 +10,12 @@ bool DroneShowPyroDevice_MultipleServos::init_impl()
 {
     uint32_t chans = _servo_channel_mask;
     uint8_t servo_channel;
+    const uint8_t max_channels =sizeof(_servo_channels) / sizeof(_servo_channels[0]);
 
+    memset(_servo_channels, 0, sizeof(_servo_channels));
     _num_servo_channels = 0;
 
-    while (chans && _num_servo_channels < PYRO_MULTIPLE_SERVOS_MAX_CHANNELS) {
+    while (chans && _num_servo_channels < max_channels) {
         servo_channel = __builtin_ffs(chans);
         chans &= chans - 1;
 
