@@ -4,6 +4,7 @@
 
 #include "DroneShowPyroDevice_Debug.h"
 #include "DroneShowPyroDevice_SingleServo.h"
+#include "DroneShowPyroDevice_MultipleServos.h"
 
 /// Default constructor.
 DroneShowPyroDeviceFactory::DroneShowPyroDeviceFactory()
@@ -15,6 +16,7 @@ DroneShowPyroDevice* DroneShowPyroDeviceFactory::new_pyro_device_by_type(
 ) {
     DroneShowPyroDevice* result = NULL;
     uint8_t chan;
+    uint32_t channel_mask;
 
     switch (type) {
         case DroneShowPyroDeviceType_Debug:
@@ -24,6 +26,13 @@ DroneShowPyroDevice* DroneShowPyroDeviceFactory::new_pyro_device_by_type(
         case DroneShowPyroDeviceType_SingleServo:
             if (SRV_Channels::find_channel(SRV_Channel::k_scripting12, chan)) {
                 result = new DroneShowPyroDevice_SingleServo(chan);
+            }
+            break;
+
+        case DroneShowPyroDeviceType_MultipleServos:
+            channel_mask = SRV_Channels::get_output_channel_mask(SRV_Channel::k_scripting12);
+            if (channel_mask) {
+                result = new DroneShowPyroDevice_MultipleServos(channel_mask);
             }
             break;
 
