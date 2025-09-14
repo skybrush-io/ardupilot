@@ -1,4 +1,5 @@
 #include <AP_GPS/AP_GPS.h>
+#include <GCS_MAVLink/GCS.h>
 
 #include "AC_DroneShowManager.h"
 #include "DroneShow_CustomPackets.h"
