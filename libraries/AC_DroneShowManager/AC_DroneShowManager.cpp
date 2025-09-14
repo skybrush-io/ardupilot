@@ -1079,7 +1079,38 @@ float AC_DroneShowManager::ShowCoordinateSystem::convert_show_to_global_yaw_and_
 void AC_DroneShowManager::ShowCoordinateSystem::convert_global_to_show_coordinate(
     const Location& loc, sb_vector3_with_yaw_t& vec
 ) const {
-    // TODO(ntamas)
+    Location origin;
+    Vector3f diff;
+
+    origin.zero();
+    origin.lat = origin_lat;
+    origin.lng = origin_lng;
+
+    if (origin_amsl_valid) {
+        // Show is controlled in AMSL
+        origin.set_alt_cm(
+            origin_amsl_mm / 10.0 /* [mm] -> [cm] */,
+            Location::AltFrame::ABSOLUTE
+        );
+    } else {
+        // Show is controlled in AGL. We use altitude above home because the
+        // EKF origin could be anywhere -- it is typically established early
+        // during the initialization process, while the home is set to the
+        // point where the drone is armed.
+        origin.set_alt_cm(0.0f, Location::AltFrame::ABOVE_HOME);
+    }
+
+    diff = origin.get_distance_NED_alt_frame(loc);
+
+    diff.x *= 1000.0f;   // [m] -> [mm]
+    diff.y *= -1000.0f;   // [m] -> [mm], East --> West
+    diff.z *= -10.0f;     // [cm] -> [mm], Down --> Up
+
+    // We need to rotate the X axis by -orientation_rad radians so it points
+    // towards the orientation of the show axis
+    vec.x = cosf(-orientation_rad) * diff.x + sinf(-orientation_rad) * diff.y;
+    vec.y = -sinf(-orientation_rad) * diff.x + cosf(-orientation_rad) * diff.y;
+    vec.z = diff.z;
 }
 
 void AC_DroneShowManager::ShowCoordinateSystem::convert_show_to_global_coordinate(
@@ -1095,9 +1126,9 @@ void AC_DroneShowManager::ShowCoordinateSystem::convert_show_to_global_coordinat
 
     // We have millimeters so far, need to convert the North and East offsets
     // to meters in the XY plane first. In the Z axis, we will need centimeters.
-    offset_north = offset_north / 1000.0f;
-    offset_east = offset_east / 1000.0f;
-    altitude = vec.z / 10.0f;
+    offset_north = offset_north / 1000.0f; // [mm] -> [m]
+    offset_east = offset_east / 1000.0f;   // [mm] -> [m]
+    altitude = vec.z / 10.0f;              // [mm] -> [cm]
 
     // Finally, we need to offset the show origin with the calculated North and
     // East offset to get a global position
