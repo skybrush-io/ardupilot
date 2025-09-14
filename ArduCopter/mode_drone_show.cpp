@@ -784,8 +784,6 @@ void ModeDroneShow::performing_run()
 
 bool ModeDroneShow::performing_completed() const
 {
-    // TODO(ntamas): what if we are late and we are not at the designated landing
-    // position yet?
     return copter.g2.drone_show_manager.get_time_until_landing_sec() <= 0;
 }
 
