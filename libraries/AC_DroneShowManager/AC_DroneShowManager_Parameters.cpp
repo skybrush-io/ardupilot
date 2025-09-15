@@ -136,7 +136,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: GROUP
     // @DisplayName: Show group index
     // @Description: Index of the group that this drone belongs to
-    // @Range: 0 7
+    // @Range: 0 63
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("GROUP", 13, AC_DroneShowManager, _params.group_index, 0),

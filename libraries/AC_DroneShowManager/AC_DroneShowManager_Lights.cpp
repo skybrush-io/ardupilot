@@ -105,7 +105,7 @@ bool AC_DroneShowManager::_handle_led_control_message(const mavlink_message_t& m
 {
     mavlink_led_control_t packet;
     LightEffectPriority priority;
-    uint8_t mask = ALL_GROUPS;
+    bool matches_group = true;
 
     mavlink_msg_led_control_decode(&msg, &packet);
 
@@ -119,15 +119,20 @@ bool AC_DroneShowManager::_handle_led_control_message(const mavlink_message_t& m
     // custom_len == 0 --> simple blink request
     // custom_len == 1 --> simple blink request, but only if the drone matches
     //                     the group mask given in the last byte
+    // custom_len == 2 --> simple blink request, but only if the drone matches
+    //                     the group _index_ given in the last two bytes (little-endian)
     // custom_len == 3 --> set the LED to a specific color for five seconds
     // custom_len == 5 --> set the LED to a specific color for a given duration (msec)
     // custom_len == 6 --> set the LED to a specific color for a given duration (msec),
     //                     modulated by a given effect
     // custom_len == 7 --> set the LED to a specific color for a given duration (msec),
     //                     modulated by a given effect, but only if the drone matches
-    //                     the group mask given in the last byte
+    //                     the group _mask_ given in the last byte
+    // custom_len == 8 --> set the LED to a specific color for a given duration (msec),
+    //                     modulated by a given effect, but only if the drone matches
+    //                     the group _index_ given in the last two bytes (little-endian)
 
-    if (packet.custom_len >= 8 || packet.custom_len == 2 || packet.custom_len == 4) {
+    if (packet.custom_len == 4 || packet.custom_len > 8) {
         // Not handled by us
         return false;
     }
@@ -157,12 +162,14 @@ bool AC_DroneShowManager::_handle_led_control_message(const mavlink_message_t& m
     // start the flash as soon as possible for responsiveness.
     _light_signal.sync_to_gps = (packet.target_system == 0);
 
-    if (packet.custom_len < 2) {
+    if (packet.custom_len < 3) {
         // Start blinking the drone show LED
         if (packet.custom_len == 1) {
-            mask = packet.custom_bytes[0];
+            matches_group = matches_group_mask(packet.custom_bytes[0]);
+        } else if (packet.custom_len == 2) {
+            matches_group = is_in_group((packet.custom_bytes[1] << 8) | packet.custom_bytes[0]);
         }
-        if (matches_group_mask(mask)) {
+        if (matches_group) {
             _flash_leds_to_attract_attention(priority);
         }
     } else if (packet.custom_len == 3) {
@@ -184,11 +191,13 @@ bool AC_DroneShowManager::_handle_led_control_message(const mavlink_message_t& m
         _light_signal.effect = LightEffect_Solid;
         _light_signal.period_msec = 0;    /* doesn't matter */
         _light_signal.phase_msec = 0;     /* doesn't matter */
-    } else if (packet.custom_len == 6 || packet.custom_len == 7) {
+    } else if (packet.custom_len == 6 || packet.custom_len == 7 || packet.custom_len == 8) {
         if (packet.custom_len == 7) {
-            mask = packet.custom_bytes[6];
+            matches_group = matches_group_mask(packet.custom_bytes[6]);
+        } else if (packet.custom_len == 8) {
+            matches_group = is_in_group((packet.custom_bytes[7] << 8) | packet.custom_bytes[6]);
         }
-        if (matches_group_mask(mask)) {
+        if (matches_group) {
             // Set the drone show LED to a specific color for a given number of
             // milliseconds, modulated by a given effect
             _light_signal.duration_msec = packet.custom_bytes[3] + (packet.custom_bytes[4] << 8);
@@ -221,7 +230,7 @@ bool AC_DroneShowManager::_handle_led_control_message(const mavlink_message_t& m
 
     // Handle zero duration; it means that we need to turn off whatever
     // effect we have now.
-    if (matches_group_mask(mask) && _light_signal.duration_msec == 0) {
+    if (matches_group && _light_signal.duration_msec == 0) {
         _light_signal.started_at_msec = 0;
         _light_signal.effect = LightEffect_Off;
     }

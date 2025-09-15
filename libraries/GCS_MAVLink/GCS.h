@@ -1297,6 +1297,9 @@ public:
     MAV_RESULT lua_command_int_packet(const mavlink_command_int_t &packet);
 #endif
 
+    // drone show module access to command_int
+    MAV_RESULT inject_command_int_packet(const mavlink_command_int_t &packet);
+
 protected:
 
     virtual GCS_MAVLINK *new_gcs_mavlink_backend(GCS_MAVLINK_Parameters &params,
