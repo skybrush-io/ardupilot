@@ -280,7 +280,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: PYRO_TYPE
     // @DisplayName: Pyrotechnic device type
     // @Description: Specifies the type of the pyrotechnic device that is used to trigger pyrotechnic effects during the show
-    // @Values: 0:None, 1:Debug, 2:SingleServo 3:MultipleServos
+    // @Values: 0:None, 1:Debug, 2:SingleServo, 3:MultipleServos
     // @User: Advanced
     AP_GROUPINFO("PYRO_TYPE", 34, AC_DroneShowManager, _params.pyro_spec.type, DroneShowPyroDeviceType_None),
 
