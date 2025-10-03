@@ -45,3 +45,4 @@
 [submodule "modules/libskybrush"]
 	path = modules/libskybrush
 	url = https://github.com/skybrush-io/libskybrush
+	branch = main
