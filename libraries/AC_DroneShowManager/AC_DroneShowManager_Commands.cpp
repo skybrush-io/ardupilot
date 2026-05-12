@@ -356,14 +356,17 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
         return true;
     }
     
-    if (
-        _last_time_axis_config_seq_no <= 0xFF &&
-        (header->seq_no - static_cast<uint8_t>(_last_time_axis_config_seq_no) >= 0xF0)
-    ) {
-        // Probably the packets are being sent on two or more redundant channels and
-        // we are receiving them out-of-order
-        return true;
-     }
+    if (_last_time_axis_config_seq_no <= 0xFF) {
+        // Check for packets received out-of-order. Note that we need a separate 'diff'
+        // variable, otherwise the integer promotion rules in C would make the
+        // subtraction signed.
+        uint8_t diff = header->seq_no - static_cast<uint8_t>(_last_time_axis_config_seq_no);
+        if (diff >= 0xF0) {
+            // Probably the packets are being sent on two or more redundant channels and
+            // we are receiving them out-of-order
+            return true;
+        }
+    }
 
     // Figure out the epoch relative to which all origin fields in the packet will be
     // interpreted
