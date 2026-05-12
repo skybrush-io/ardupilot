@@ -364,6 +364,7 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
         if (diff >= 0xF0) {
             // Probably the packets are being sent on two or more redundant channels and
             // we are receiving them out-of-order
+            _time_axis_configuration_out_of_order_count++;
             return true;
         }
     }

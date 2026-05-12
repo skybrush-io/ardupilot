@@ -41,6 +41,7 @@ struct PACKED log_DroneShowStatus {
     float h_dist;
     float v_dist;
     uint16_t time_axis_config_packet_count;
+    uint8_t time_axis_config_out_of_order_count;
     uint8_t time_axis_config_last_error;
 };
 
@@ -132,7 +133,7 @@ struct PACKED log_CollectiveRTHTrigger {
 
 #define LOG_STRUCTURE_FROM_DRONE_SHOW \
     { LOG_DRONE_SHOW_MSG, sizeof(log_DroneShowStatus),                  \
-      "SHOW", "QiBBifffBBBffHB", "TimeUS,ClockMS,Stage,Scene,SceneMS,X,Y,Z,R,G,B,HDst,VDst,TAC,TAE", "ss--smmm---mm--", "FC--C----------" }, \
+      "SHOW", "QiBBifffBBBffHBB", "TimeUS,ClockMS,Stage,Scn,ScnMS,X,Y,Z,R,G,B,HDst,VDst,TAC,TAO,TAE", "ss--smmm---mm---", "FC--C-----------" }, \
     { LOG_FENCE_STATUS_MSG, sizeof(log_FenceStatus),                    \
       "FNCS", "QBBHBBH", "TimeUS,GeoEn,GeoB,GeoCnt,HardB,BubbleB,BubbleCnt", "s------", "F------" }, \
     { LOG_DRONE_SHOW_EVENT_MSG, sizeof(log_DroneShowEvent),              \

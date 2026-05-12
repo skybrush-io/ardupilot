@@ -37,6 +37,7 @@ void AC_DroneShowManager::write_show_status_log_message() const
         h_dist          : hypotf(dist.x, dist.y),
         v_dist          : dist.z,
         time_axis_config_packet_count: _time_axis_configuration_packet_count,
+        time_axis_config_out_of_order_count: _time_axis_configuration_out_of_order_count,
         time_axis_config_last_error: _time_axis_configuration_last_error,
     };
 

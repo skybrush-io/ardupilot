@@ -47,6 +47,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _rc_switches_blocked_until(0),
     _boot_count(0),
     _time_axis_configuration_packet_count(0),
+    _time_axis_configuration_out_of_order_count(0),
     _time_axis_configuration_last_error(0),
     _projected_wall_clock_time_at_takeoff_sec(NAN),
     _last_time_axis_config_seq_no(0xFFFF)    // 0xFFFF is never a valid sequence number
