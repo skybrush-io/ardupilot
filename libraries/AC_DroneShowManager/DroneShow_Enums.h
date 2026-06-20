@@ -40,6 +40,9 @@ enum DroneShowAuthorization : int8_t {
 
     // Show authorized to start with lights only, no takeoff is allowed
     DroneShowAuthorization_Granted_Lights_Only = 3,
+
+    // Last valid value
+    DroneShowAuthorization_Last = DroneShowAuthorization_Granted_Lights_Only
 };
 
 // Flags representing various failures in drone show specific preflight checks.

@@ -23,6 +23,8 @@ static const AC_DroneShowManager::TelemetryRequest compact_telemetry_stream[] = 
     NO_MORE_MESSAGES
 };
 
+static int32_t encode_gps_start_time(int32_t gps_sec, int32_t gps_msec_offset);
+
 const AC_DroneShowManager::TelemetryRequest* AC_DroneShowManager::get_preferred_telemetry_messages() const
 {
     switch (_params.telemetry_profile) {
@@ -210,7 +212,7 @@ uint8_t* AC_DroneShowManager::_fill_drone_show_status_packet_buffer(uint8_t* buf
      * start time according to GPS timestamps, even if we are using the
      * internal clock to synchronize the start. This is to make sure that the
      * UI on Skybrush Live shows the GPS timestamp set by the user */
-    status->start_time = _params.start_time_gps_sec;
+    status->start_time = encode_gps_start_time(_params.start_time_gps_sec, _params.start_time_gps_msec_offset);
     status->led_color = sb_rgb_color_encode_rgb565(_last_rgb_led_color);
     status->flags = flags;
     status->flags2 = flags2;
@@ -237,4 +239,16 @@ uint8_t* AC_DroneShowManager::_fill_drone_show_status_packet_buffer(uint8_t* buf
     }
 
     return buf + sizeof(CustomPackets::drone_show_status_t);
+}
+
+static int32_t encode_gps_start_time(int32_t gps_sec, int32_t gps_msec_offset)
+{
+    if (gps_sec < 0) {
+        return -1;
+    }
+
+    // gps_sec is between 0 and GPS_WEEK_LENGTH_SEC so 20 bits are enough. We store
+    // the millisecond offset shifted right by 20 bits, and we mask the remaining
+    // two bits.
+    return (gps_sec & 0xFFFFF) | ((gps_msec_offset & 0x3FF) << 20);
 }

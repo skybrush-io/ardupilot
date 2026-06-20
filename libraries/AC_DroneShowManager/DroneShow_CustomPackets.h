@@ -58,13 +58,19 @@ namespace CustomPackets {
         // currently set. Negative number means that the start time must be
         // cleared.
         int32_t start_time;
-        DroneShowAuthorization authorization;
+        uint8_t authorization;
 
         struct PACKED {
             // Countdown, i.e. number of milliseconds until the start of the show.
             // Positive number means that there is still some time left.
             int32_t countdown_msec;
-        } optional_part;
+        } v2_extended_part;
+
+        struct PACKED {
+            // Millisecond part of the start time. Only the 10 least significant bits
+            // are used.
+            uint16_t start_time_msec_offset;
+        } v3_extended_part;
     } start_config_t;
 
     typedef struct PACKED {

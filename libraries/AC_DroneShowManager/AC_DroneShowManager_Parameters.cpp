@@ -8,17 +8,28 @@
 const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: START_TIME
     // @DisplayName: Start time
-    // @Description: Start time of drone show as a GPS time of week timestamp (sec), negative if unset
+    // @Description: Start time of drone show as a GPS time of week timestamp (sec), negative if unset. See also SHOW_START_MSEC.
     // @Range: -1 604799
     // @Increment: 1
     // @Units: sec
     // @Volatile: True
     // @User: Standard
     //
-    // Note that we cannot use UNIX timestamps here because ArduPilot stores
-    // all parameters as floats, and floats can represent integers accurately
-    // only up to 2^23 - 1
+    // Note that we cannot use UNIX timestamps here because ArduPilot treats incoming
+    // parameter values from MAVLink PARAM_SET messages as floats (irrespectively of the
+    // internal storage format), so setting the start time via MAVLink would round it
+    // off to the nearest integer that _is_ representable accurately as a float.
     AP_GROUPINFO("START_TIME", 1, AC_DroneShowManager, _params.start_time_gps_sec, -1),
+
+    // @Param: START_MSEC
+    // @DisplayName: Start time, extra millisecond offset
+    // @Description: Number of milliseconds to add to the start time of the show in the SHOW_START_TIME parameter.
+    // @Range: 0 999
+    // @Increment: 1
+    // @Units: msec
+    // @Volatile: True
+    // @User: Standard
+    AP_GROUPINFO("START_MSEC", 40, AC_DroneShowManager, _params.start_time_gps_msec_offset, 0),
 
     // @Param: ORIGIN_LAT
     // @DisplayName: Show origin (latitude)
@@ -318,7 +329,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("MAX_ESC_ERR", 39, AC_DroneShowManager, _params.max_esc_error_rate_pcnt, DEFAULT_MAX_ESC_ERROR_RATE_PCNT),
 
-    // Currently used max parameter ID: 39; update this if you add more parameters.
+    // Currently used max parameter ID: 40; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
@@ -352,6 +363,7 @@ bool AC_DroneShowManager::should_switch_to_show_mode_when_authorized() const
 void AC_DroneShowManager::_check_changes_in_parameters()
 {
     static int32_t last_seen_start_time_gps_sec = -1;
+    static int16_t last_seen_start_time_gps_msec_offset = 0;
     static bool last_seen_show_authorization_state = false;
     static int16_t last_seen_control_rate_hz = DEFAULT_UPDATE_RATE_HZ;
     static int32_t last_seen_origin_lat = 200000000;        // intentionally invalid
@@ -367,7 +379,10 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         _params.origin_amsl_mm != last_seen_origin_amsl_mm ||
         !is_zero(_params.orientation_deg - last_seen_orientation_deg)
     );
-    bool new_start_time_pending = _params.start_time_gps_sec != last_seen_start_time_gps_sec;
+    bool new_start_time_pending = (
+        _params.start_time_gps_sec != last_seen_start_time_gps_sec ||
+        _params.start_time_gps_msec_offset != last_seen_start_time_gps_msec_offset
+    );
     bool new_show_authorization_pending = _params.authorization != last_seen_show_authorization_state;
 
     if (new_coordinate_system_pending) {
@@ -396,22 +411,25 @@ void AC_DroneShowManager::_check_changes_in_parameters()
 
     if (new_start_time_pending && (_is_gps_time_ok() || _params.start_time_gps_sec < 0)) {
         last_seen_start_time_gps_sec = _params.start_time_gps_sec;
+        last_seen_start_time_gps_msec_offset = _params.start_time_gps_msec_offset;
 
         if (last_seen_start_time_gps_sec >= 0) {
-            start_time_gps_msec = last_seen_start_time_gps_sec * 1000;
+            uint16_t gps_week_of_start_time;
+           
+            start_time_gps_msec = last_seen_start_time_gps_sec * 1000 + last_seen_start_time_gps_msec_offset;
             if (AP::gps().time_week_ms() < start_time_gps_msec) {
                 // Interpret the given timestamp in the current GPS week as it is in
                 // the future even with the same GPS week number
-                _start_time_unix_usec = AP::gps().istate_time_to_epoch_ms(
-                    AP::gps().time_week(), start_time_gps_msec
-                ) * 1000ULL;
+                gps_week_of_start_time = AP::gps().time_week();
             } else {
                 // Interpret the given timestamp in the next GPS week as it is in
                 // the past with the same GPS week number
-                _start_time_unix_usec = AP::gps().istate_time_to_epoch_ms(
-                    AP::gps().time_week() + 1, start_time_gps_msec
-                ) * 1000ULL;
+                gps_week_of_start_time = AP::gps().time_week() + 1;
             }
+
+            _start_time_unix_usec = AP::gps().istate_time_to_epoch_ms(
+                gps_week_of_start_time, start_time_gps_msec
+            ) * 1000ULL;
 
             if (_start_time_requested_by == StartTimeSource::NONE) {
                 _start_time_requested_by = StartTimeSource::PARAMETER;

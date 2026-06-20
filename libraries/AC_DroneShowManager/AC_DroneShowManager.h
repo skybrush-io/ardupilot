@@ -485,6 +485,23 @@ public:
     // start time" phase.
     bool schedule_delayed_start_after(uint32_t delay_ms);
 
+    // Sets the scheduled start time of the show according to GPS time, in seconds and
+    // milliseconds. This function does _not_ set the synchronization mode to GPS time
+    // if it is set to something else; it is only responsible for updating the two
+    // parameters storing the start time in tandem.
+    //
+    // Negative values in gps_sec will clear the scheduled GPS-based start time.
+    // gps_sec values larger than the number of seconds in a GPS week are considered
+    // invalid and will be rejected. Millisecond offsets are accepted and updated if
+    // and only if the gps_sec value is valid.
+    //
+    // Note that the function will update the parameters even if the show is not in the
+    // "waiting for start time" phase. However, the changes will not update the _actual_
+    // internal variables that we use to start the show.
+    //
+    // Returns whether the parameters were updated successfully.
+    bool set_scheduled_start_time_in_gps_time_of_week(int32_t gps_sec, int16_t gps_msec_offset);
+
     // Sends a drone show status message (wrapped in a DATA16 packet) on the given MAVLink channel.
     // This is used by the legacy telemetry configuration where information from this packet must
     // be augmented from GLOBAL_POSITION_INT and GPS_RAW_INT.
@@ -561,8 +578,14 @@ private:
     // Structure holding all the parameters settable by the user
     struct {
         // Start time in GPS time of week (seconds), as set by the user in a parameter.
-        // Used only when time_sync_mode == TimeSyncMode_GPS
+        // Used only when time_sync_mode == TimeSyncMode_GPS. Must be considered
+        // together with start_time_gps_msec_offset to allow for millisecond-level
+        // precision.
         AP_Int32 start_time_gps_sec;
+
+        // Extra millisecond offset to add to the start time in GPS time, as set by the
+        // user in a parameter. This allows for millisecond-level precision.
+        AP_Int16 start_time_gps_msec_offset;
 
         // Latitude of drone show coordinate system, in 1e-7 degrees, as set in the parameters by the user
         AP_Int32 origin_lat;
@@ -935,10 +958,19 @@ private:
     // Handles a MAVLink DATA96 message from the ground station.
     bool _handle_data96_message(mavlink_channel_t chan, const mavlink_message_t& msg);
 
+    // Handles an acknowledgment packet
+    bool _handle_acknowledgment_packet(void* data, uint8_t length);
+
+    // Handles a simple geofence setup packet
+    bool _handle_geofence_setup_packet(void* data, uint8_t length, uint8_t* reply);
+
     // Handles a MAVLink LED_CONTROL message from the ground station.
     bool _handle_led_control_message(const mavlink_message_t& msg);
-    
-    // Handles a time axis configuration packet whose length has already been verified
+
+    // Handles a start time configuration packet
+    bool _handle_start_time_configuration_packet(void* data, uint8_t length);
+
+    // Handles a time axis configuration packet
     bool _handle_time_axis_configuration_packet(void* data, uint8_t length);
 
     // Returns whether the given option flag is set in the SHOW_OPTIONS parameter

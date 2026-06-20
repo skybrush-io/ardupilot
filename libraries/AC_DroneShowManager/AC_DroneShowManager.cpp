@@ -98,6 +98,7 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     // subsystem has already loaded back the previous value from the EEPROM so
     // we are safe to overwrite it
     _params.start_time_gps_sec.set(-1);
+    _params.start_time_gps_msec_offset.set(0);
     _params.authorization.set(DroneShowAuthorization_Revoked);
 
     _load_show_file_from_storage();
@@ -122,6 +123,7 @@ bool AC_DroneShowManager::clear_scheduled_start_time(bool force)
     }
 
     _params.start_time_gps_sec.set(-1);
+    _params.start_time_gps_msec_offset.set(0);
     _start_time_on_internal_clock_usec = 0;
     _start_time_requested_by = StartTimeSource::NONE;
     _start_time_unix_usec = 0;
@@ -489,12 +491,11 @@ bool AC_DroneShowManager::schedule_delayed_start_after(uint32_t delay_ms)
 
     if (uses_gps_time_for_show_start()) {
         if (_is_gps_time_ok()) {
-            // We are modifying a parameter directly here without notifying the
-            // param subsystem, but this is okay -- we do not want to save the
-            // start time into the EEPROM, and it is reset at the next boot anyway.
-            // Delay is rounded down to integer seconds.
-            _params.start_time_gps_sec.set(((AP::gps().time_week_ms() + delay_ms) / 1000) % GPS_WEEK_LENGTH_SEC);
-            success = true;
+            uint32_t desired_start_time = AP::gps().time_week_ms() + delay_ms;
+            success = set_scheduled_start_time_in_gps_time_of_week(
+                (desired_start_time / 1000) % GPS_WEEK_LENGTH_SEC,
+                desired_start_time % 1000
+            );
         }
     } else {
         _start_time_on_internal_clock_usec = AP_HAL::micros64() + (delay_ms * 1000);
@@ -503,6 +504,26 @@ bool AC_DroneShowManager::schedule_delayed_start_after(uint32_t delay_ms)
 
     if (success) {
         _start_time_requested_by = StartTimeSource::START_METHOD;
+    }
+
+    return success;
+}
+
+bool AC_DroneShowManager::set_scheduled_start_time_in_gps_time_of_week(
+    int32_t gps_sec, int16_t gps_msec_offset
+) {
+    bool success = true;
+
+    if (gps_sec < 0) {
+        _params.start_time_gps_sec.set(-1);
+    } else if (gps_sec < GPS_WEEK_LENGTH_SEC) {
+        _params.start_time_gps_sec.set(gps_sec);
+    } else {
+        success = false;
+    }
+
+    if (success) {
+        _params.start_time_gps_msec_offset.set(gps_msec_offset);
     }
 
     return success;

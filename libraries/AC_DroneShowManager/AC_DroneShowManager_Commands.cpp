@@ -162,9 +162,16 @@ bool AC_DroneShowManager::handle_message(mavlink_channel_t chan, const mavlink_m
 bool AC_DroneShowManager::_handle_custom_data_message(mavlink_channel_t chan, uint8_t type, void* data, uint8_t length)
 {
     uint8_t reply[16];
+    bool handled = false;
+    bool needs_reply = false;
     
     if (data == nullptr) {
         return false;
+    }
+
+    needs_reply = (type == CustomPackets::SIMPLE_GEOFENCE_SETUP);
+    if (needs_reply) {
+        memset(reply, 0, sizeof(reply));
     }
 
     // We allocate type 0x5C for the GCS-to-drone packets (0X5B is the drone-to-GCS
@@ -175,105 +182,42 @@ bool AC_DroneShowManager::_handle_custom_data_message(mavlink_channel_t chan, ui
     switch (type) {
         // Broadcast start time and authorization state of the show
         case CustomPackets::START_CONFIG:
-            {
-                if (length < offsetof(CustomPackets::start_config_t, optional_part)) {
-                    // Packet too short
-                    return false;
-                }
-
-                CustomPackets::start_config_t* start_config = static_cast<CustomPackets::start_config_t*>(data);
-
-                // Update start time expressed in GPS time of week
-                if (start_config->start_time < 0) {
-                    _params.start_time_gps_sec.set(-1);
-                } else if (start_config->start_time < GPS_WEEK_LENGTH_SEC) {
-                    _params.start_time_gps_sec.set(start_config->start_time);
-                }
-
-                // Update authorization flag
-                _params.authorization.set(start_config->authorization);
-
-                // Do we have the optional second part?
-                if (length >= sizeof(CustomPackets::start_config_t)) {
-                    // Optional second part is used by the GCS to convey how many
-                    // milliseconds there are until the start of the show. If this
-                    // part exists and is positive, _and_ we are using the internal
-                    // clock to synchronize the start, then we update the start
-                    // time based on this
-                    if (!uses_gps_time_for_show_start()) {
-                        int32_t countdown_msec = start_config->optional_part.countdown_msec;
-
-                        if (countdown_msec < -GPS_WEEK_LENGTH_MSEC) {
-                            clear_scheduled_start_time();
-                        } else if (countdown_msec >= 0 && countdown_msec < GPS_WEEK_LENGTH_MSEC) {
-                            schedule_delayed_start_after(countdown_msec);
-                        }
-                    }
-                }
-
-                return true;
-            }
+            handled = _handle_start_time_configuration_packet(data, length);
             break;
 
         // Schedule collective RTL; obsolete, does nothing, kept for backward compatibility
         case CustomPackets::DEPRECATED_CRTL_TRIGGER:
-            return true;
+            handled = true;
+            break;
 
         // Configure geofences with a single call
         case CustomPackets::SIMPLE_GEOFENCE_SETUP:
-            if (length >= sizeof(CustomPackets::simple_geofence_setup_header_t)) {
-                CustomPackets::simple_geofence_setup_header_t* geofence_setup = static_cast<CustomPackets::simple_geofence_setup_header_t*>(data);
-                DroneShow_FenceConfig fence_config;
-                CustomPackets::acknowledgment_t* ack_packet = reinterpret_cast<CustomPackets::acknowledgment_t*>(reply + 1);
-                size_t points_payload_length_in_bytes = length - sizeof(CustomPackets::simple_geofence_setup_header_t);
-                size_t num_points = points_payload_length_in_bytes / sizeof(DroneShow_FencePoint);
-                MAV_RESULT result = MAV_RESULT_FAILED;
-
-                // Convert from geofence_setup to fence_config
-                fence_config.max_altitude_dm = geofence_setup->max_altitude_dm;
-                fence_config.radius_dm = geofence_setup->radius_dm;
-                fence_config.action = geofence_setup->flags & 0x0f;
-                fence_config.num_points = geofence_setup->num_points;
-                fence_config.points = reinterpret_cast<DroneShow_FencePoint*>(
-                    reinterpret_cast<uint8_t*>(geofence_setup) +
-                    sizeof(CustomPackets::simple_geofence_setup_header_t)
-                );
-                if (fence_config.num_points <= num_points) {
-                    result = configure_fences(fence_config) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-                }
-
-                // Prepare the reply packet
-                memset(reply, 0, sizeof(reply));
-                reply[0] = CustomPackets::ACKNOWLEDGMENT;
-                ack_packet->ack_token = geofence_setup->ack_token;
-                ack_packet->result = result;
-
-                // Send the reply packet
-                mavlink_msg_data16_send(
-                    chan,
-                    CustomPackets::DRONE_TO_GCS,   // Skybrush status packet type marker
-                    sizeof(CustomPackets::acknowledgment_t),     // effective packet length
-                    reply
-                );
-
-                return true;
-            }
+            handled = _handle_geofence_setup_packet(data, length, reply);
             break;
 
         // Acknowledgment packets; these can be ignored (but we still return
         // true as we do not want any other handlers to handle them)
         case CustomPackets::ACKNOWLEDGMENT:
-            if (length >= sizeof(CustomPackets::acknowledgment_t)) {
-                return true;
-            }
+            handled = _handle_acknowledgment_packet(data, length);
             break;
-            
+
         // Time axis configuration packet, used to implement suspension and resume
         case CustomPackets::TIME_AXIS_CONFIG:
-            return _handle_time_axis_configuration_packet(data, length);
+            handled = _handle_time_axis_configuration_packet(data, length);
+            break;
     }
 
-    return false;
+    if (handled && needs_reply) {
+        // Send the reply packet
+        mavlink_msg_data16_send(
+            chan,
+            CustomPackets::DRONE_TO_GCS,   // Skybrush status packet type marker
+            sizeof(CustomPackets::acknowledgment_t),     // effective packet length
+            reply
+        );
+    }
+
+    return handled;
 }
 
 bool AC_DroneShowManager::_handle_data16_message(mavlink_channel_t chan, const mavlink_message_t& msg)
@@ -314,6 +258,137 @@ bool AC_DroneShowManager::_handle_data96_message(mavlink_channel_t chan, const m
         return false;
     }
     return _handle_custom_data_message(chan, packet.data[0], packet.data + 1, packet.len - 1);
+}
+
+bool AC_DroneShowManager::_handle_acknowledgment_packet(void* data, uint8_t length)
+{
+    // Only a length check; we don't need to do anything with this packet
+    return length >= sizeof(CustomPackets::acknowledgment_t);
+}
+
+bool AC_DroneShowManager::_handle_geofence_setup_packet(void* data, uint8_t length, uint8_t* reply)
+{
+    if (length < sizeof(CustomPackets::simple_geofence_setup_header_t)) {
+        // Packet too short
+        return false;
+    }
+
+    CustomPackets::simple_geofence_setup_header_t* geofence_setup = static_cast<CustomPackets::simple_geofence_setup_header_t*>(data);
+    DroneShow_FenceConfig fence_config;
+    CustomPackets::acknowledgment_t* ack_packet = reinterpret_cast<CustomPackets::acknowledgment_t*>(reply + 1);
+    size_t points_payload_length_in_bytes = length - sizeof(CustomPackets::simple_geofence_setup_header_t);
+    size_t num_points = points_payload_length_in_bytes / sizeof(DroneShow_FencePoint);
+    MAV_RESULT result = MAV_RESULT_FAILED;
+
+    // Convert from geofence_setup to fence_config
+    fence_config.max_altitude_dm = geofence_setup->max_altitude_dm;
+    fence_config.radius_dm = geofence_setup->radius_dm;
+    fence_config.action = geofence_setup->flags & 0x0f;
+    fence_config.num_points = geofence_setup->num_points;
+    fence_config.points = reinterpret_cast<DroneShow_FencePoint*>(
+        reinterpret_cast<uint8_t*>(geofence_setup) +
+        sizeof(CustomPackets::simple_geofence_setup_header_t)
+    );
+    if (fence_config.num_points <= num_points) {
+        result = configure_fences(fence_config) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+    }
+
+    // Prepare the reply packet
+    reply[0] = CustomPackets::ACKNOWLEDGMENT;
+    ack_packet->ack_token = geofence_setup->ack_token;
+    ack_packet->result = result;
+
+    return true;
+}
+
+bool AC_DroneShowManager::_handle_start_time_configuration_packet(void* data, uint8_t length)
+{
+    if (length < offsetof(CustomPackets::start_config_t, v2_extended_part)) {
+        // Packet too short
+        return false;
+    }
+
+    CustomPackets::start_config_t* start_config = static_cast<CustomPackets::start_config_t*>(data);
+
+    // The start time is encoded as a little-endian 32-bit signed integer, meaning the
+    // number of seconds elapsed since the start of the current GPS week in the range
+    // [0; 604799].
+    //
+    // Additional special values in start_config->start_time are:
+    //
+    // 0x7FFFFFFF (decimal 2147483647) = "do not change start time"
+    // -0x80000000 (decimal -2147483648) = "clear start time / no start time"
+    //
+    // We are liberal in what we accept so any negative value is treated as
+    // "clear start time", while any value greater than or equal to GPS_WEEK_LENGTH_SEC
+    // (604800) is treated as "do not change start time".
+    //
+    // Since May 2026 we added support for setting the start time in millisecond
+    // precision. The millisecond part is transmitted separately in the optional part
+    // of the start time configuration packet, for backward compatibility reasons.
+
+    // Update start time expressed in GPS time of week
+    if (start_config->start_time < 0) {
+        // Clear start time
+        set_scheduled_start_time_in_gps_time_of_week(-1, 0);
+    } else if (start_config->start_time >= GPS_WEEK_LENGTH_SEC) {
+        // Do not change start time
+    } else {
+        // Try to set the start time since the range is valid
+        uint16_t millisecond_offset;
+
+        // Do we have the optional v3 extensino part?
+        if (length >= sizeof(CustomPackets::start_config_t)) {
+            // Optional millisecond part is present in the packet; use it if it's valid
+            // Only the 10 least significant bits are used. Remaining bits are ignored;
+            // GCS should send them as zeros so we can use them later for other purposes
+            // if needed.
+            millisecond_offset = start_config->v3_extended_part.start_time_msec_offset & 0x3FF;
+        } else {
+            // Optional millisecond part is not present; assume zero
+            millisecond_offset = 0;
+        }
+
+        set_scheduled_start_time_in_gps_time_of_week(start_config->start_time, millisecond_offset);
+    }
+
+    // Update authorization scope
+    if (start_config->authorization == 255) {
+        // Do not change authorization
+    } else if (start_config->authorization <= DroneShowAuthorization_Last) {
+        // Update authorization scope
+        _params.authorization.set(start_config->authorization);
+    } else {
+        // Invalid value, revoke authorization for safety reasons
+        _params.authorization.set(DroneShowAuthorization_Revoked);
+    }
+
+    // Do we have the optional v2 extension part?
+    if (length >= offsetof(CustomPackets::start_config_t, v3_extended_part)) {
+        // Optional v2 part is used by the GCS to convey how many
+        // milliseconds there are until the start of the show. If this
+        // part exists and is positive, _and_ we are using the internal
+        // clock to synchronize the start, then we update the start
+        // time based on this
+        if (!uses_gps_time_for_show_start()) {
+            int32_t countdown_msec = start_config->v2_extended_part.countdown_msec;
+
+            if (countdown_msec == 0x7FFFFFFF) {
+                // Do not change start time
+            } else if (countdown_msec < -GPS_WEEK_LENGTH_MSEC) {
+                // Outside normal range; clear start time
+                clear_scheduled_start_time();
+            } else if (countdown_msec >= 0 && countdown_msec < GPS_WEEK_LENGTH_MSEC) {
+                // Start time is in the future; schedule the takeoff
+                schedule_delayed_start_after(countdown_msec);
+            } else {
+                // Start time is in the past but within the current GPS week; ignore
+                // it as the show might be running normally
+            }
+        }
+    }
+
+    return true;
 }
 
 bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uint8_t length)
@@ -390,12 +465,14 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
         if (epoch_msec > 0) {
             // Start time set, but we need to convert from milliseconds to seconds
             // since the start of the GPS week
-            _params.start_time_gps_sec.set(
-                ((epoch_msec - UNIX_OFFSET_MSEC) % AP_MSEC_PER_WEEK) / 1000
+            uint64_t epoch_msec_since_gps_time_origin = epoch_msec - UNIX_OFFSET_MSEC;
+            set_scheduled_start_time_in_gps_time_of_week(
+                (epoch_msec_since_gps_time_origin / 1000) % GPS_WEEK_LENGTH_SEC,
+                epoch_msec_since_gps_time_origin % 1000
             );
         } else {
             // Start time not set
-            _params.start_time_gps_sec.set(-1);
+            set_scheduled_start_time_in_gps_time_of_week(-1, 0);
         }
     } else {
         // When using the internal clock for show start, the origin is assumed to be
