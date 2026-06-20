@@ -3,37 +3,8 @@
 #include "AC_DroneShowManager.h"
 #include "AC_DroneShowManager/DroneShow_Enums.h"
 
-// Returns the current time according to the GPS, in microseconds.
-//
-// This function takes care of eliminating glitches in the GPS timestamp that
-// may happen when a GPS message updates the stored GPS time-of-week but not
-// the correspnding GPS week number. This is a glitch that is known to have
-// happened with U-blox GPS modules in ArduPilot 4.6, but other versions or
-// GPS drivers may also be affected so we try to protect against it.
-//
-// The fix we use here is simply to assume that GPS time cannot move backward.
-// If we receive a reported GPS time that is earlier than the previous value
-// (which we store here), we return the previous value instead.
-//
-// We assume that glitches only occur "backwards" in time, not forward. That
-// would require a GPS message handler that updates the GPS week number _without_
-// updating the GPS time-of-week, which is unlikely to happen in practice
-// (all GPS messages that carry the week number are also likely to carry the
-// time-of-week).
-static uint64_t get_gps_timestamp_usec()
-{
-    // AP::gps().time_epoch_usec() is smart enough to handle the case when
-    // the GPS fix was lost so no need to worry about loss of GPS fix here.
-    static uint64_t last_gps_time_usec = 0;
-    uint64_t current_gps_time_usec = AP::gps().time_epoch_usec();
-
-    if (current_gps_time_usec < last_gps_time_usec) {
-        return last_gps_time_usec;
-    } else {
-        last_gps_time_usec = current_gps_time_usec;
-        return current_gps_time_usec;
-    }
-}
+static uint64_t get_gps_timestamp_usec();
+static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage);
 
 int64_t AC_DroneShowManager::get_elapsed_time_since_start_usec() const
 {
@@ -164,4 +135,49 @@ bool AC_DroneShowManager::_is_gps_time_ok() const
     // that the GPS subsystem receives iTOW information from the GPS module but
     // no week number; we deem this unreliable so we return false in this case.
     return AP::gps().time_week() > 0;
+}
+
+bool AC_DroneShowManager::_is_safe_to_change_start_time_in_current_stage() const {
+    return is_safe_to_change_start_time_in_stage(_stage_in_drone_show_mode);
+}
+
+static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage) {
+    return (
+        stage == DroneShow_Off ||
+        stage == DroneShow_Init ||
+        stage == DroneShow_WaitForStartTime ||
+        stage == DroneShow_Landed
+    );
+}
+
+// Returns the current time according to the GPS, in microseconds.
+//
+// This function takes care of eliminating glitches in the GPS timestamp that
+// may happen when a GPS message updates the stored GPS time-of-week but not
+// the correspnding GPS week number. This is a glitch that is known to have
+// happened with U-blox GPS modules in ArduPilot 4.6, but other versions or
+// GPS drivers may also be affected so we try to protect against it.
+//
+// The fix we use here is simply to assume that GPS time cannot move backward.
+// If we receive a reported GPS time that is earlier than the previous value
+// (which we store here), we return the previous value instead.
+//
+// We assume that glitches only occur "backwards" in time, not forward. That
+// would require a GPS message handler that updates the GPS week number _without_
+// updating the GPS time-of-week, which is unlikely to happen in practice
+// (all GPS messages that carry the week number are also likely to carry the
+// time-of-week).
+static uint64_t get_gps_timestamp_usec()
+{
+    // AP::gps().time_epoch_usec() is smart enough to handle the case when
+    // the GPS fix was lost so no need to worry about loss of GPS fix here.
+    static uint64_t last_gps_time_usec = 0;
+    uint64_t current_gps_time_usec = AP::gps().time_epoch_usec();
+
+    if (current_gps_time_usec < last_gps_time_usec) {
+        return last_gps_time_usec;
+    } else {
+        last_gps_time_usec = current_gps_time_usec;
+        return current_gps_time_usec;
+    }
 }

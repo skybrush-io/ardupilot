@@ -369,6 +369,16 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
         }
     }
 
+    // Remember the sequence number
+    _last_time_axis_config_seq_no = header->seq_no;
+
+    // Check whether we can accept this time axis configuration packet given its header
+    // and the current state of the drone show manager. If we cannot, we ignore the
+    // packet and return false.
+    if (!_is_safe_to_accept_time_axis_configuration_packet(*header)) {
+        return false;
+    }
+
     // Figure out the epoch relative to which all origin fields in the packet will be
     // interpreted
     if (uses_gps_time_for_show_start()) {
@@ -392,9 +402,6 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
         // to handle it nevertheless.
         epoch_msec = 0;
     }
-    
-    // Remember the sequence number
-    _last_time_axis_config_seq_no = header->seq_no;
     
     // We need to be extra careful here; if an error happens while we are setting up the
     // new scenes, we want to leave the existing screenplay intact. Therefore, we first
@@ -612,4 +619,31 @@ exit:
     }
     
     return success;
+}
+
+bool AC_DroneShowManager::_is_safe_to_accept_time_axis_configuration_packet(
+    const CustomPackets::time_axis_config_header_t& header) const
+{
+    if (!uses_gps_time_for_show_start()) {
+        // When using the internal clock for show start, we can accept any time axis
+        // configuration packet at any time
+        return true;
+    }
+
+    // Slight adjustments to the start time is okay; this can happen if the time code
+    // is slipping a bit and the GCS is trying to correct it.
+    bool would_change_start_time_significantly = (
+        (header.start_time_msec - _start_time_unix_usec / 1000) >= 100
+    );
+    if (
+        would_change_start_time_significantly &&
+        !_is_safe_to_change_start_time_in_current_stage()
+    ) {
+        // We are not allowed to change the start time in the current stage of the
+        // drone show mode, so we cannot accept a time axis configuration packet
+        // that would change the start time
+        return false;
+    }
+
+    return true;
 }

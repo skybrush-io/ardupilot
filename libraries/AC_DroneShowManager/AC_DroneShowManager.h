@@ -19,9 +19,9 @@
 #include <cstdint>
 #include <skybrush/skybrush.h>
 
+#include "DroneShow_CustomPackets.h"
 #include "DroneShow_Enums.h"
 #include "DroneShow_FenceConfig.h"
-#include "skybrush/screenplay.h"
 
 class DroneShowLEDFactory;
 class DroneShowLED;
@@ -829,7 +829,7 @@ private:
 
     // Returns whether the RC switches are currently blocked
     bool _are_rc_switches_blocked();
-    
+
     // Checks whether there were any changes in the parameters relevant to the
     // execution of the drone show. This has to be called regularly from update()
     void _check_changes_in_parameters();
@@ -976,6 +976,20 @@ private:
 
     // Returns whether pyro events can be handled safely in the current state
     bool _is_pyro_safe_to_fire() const;
+
+    // Returns whether a new time axis configuration packet with the given header can
+    // be accepted now, given the current state of the drone show manager. This is used
+    // to avoid accepting a new time axis configuration packet with a different start
+    // time when the show is already running, which would most likely cause a jump in
+    // the expected position of the drone.
+    bool _is_safe_to_accept_time_axis_configuration_packet(
+        const CustomPackets::time_axis_config_header_t& header) const;
+
+    // Returns whether it is safe to change the start time of the show in the current
+    // stage of the drone show mode. This is used to determine whether we can accept a
+    // new value of the start time parameter or a new time axis configuration packet
+    // whose start time is different from the current one
+    bool _is_safe_to_change_start_time_in_current_stage() const;
 
     // Recalculates the values of some internal variables that are derived from
     // the current trajectory when it is loaded.

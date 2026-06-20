@@ -5,8 +5,6 @@
 #include "DroneShow_Constants.h"
 #include "DroneShowPyroDeviceFactory.h"
 
-static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage);
-
 const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @Param: START_TIME
     // @DisplayName: Start time
@@ -389,7 +387,7 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         // already performing the show, or if the show is supposed to be started
         // with a countdown
         if (
-            !is_safe_to_change_start_time_in_stage(_stage_in_drone_show_mode) ||
+            !_is_safe_to_change_start_time_in_current_stage() ||
             !uses_gps_time_for_show_start()
         ) {
             new_start_time_pending = false;
@@ -474,13 +472,4 @@ bool AC_DroneShowManager::_copy_show_coordinate_system_from_parameters_to(
     }
 
     return true;
-}
-
-static bool is_safe_to_change_start_time_in_stage(DroneShowModeStage stage) {
-    return (
-        stage == DroneShow_Off ||
-        stage == DroneShow_Init ||
-        stage == DroneShow_WaitForStartTime ||
-        stage == DroneShow_Landed
-    );
 }
