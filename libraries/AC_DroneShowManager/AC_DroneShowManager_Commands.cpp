@@ -376,6 +376,7 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
     // and the current state of the drone show manager. If we cannot, we ignore the
     // packet and return false.
     if (!_is_safe_to_accept_time_axis_configuration_packet(*header)) {
+        _time_axis_configuration_last_error = 17;
         return false;
     }
 
