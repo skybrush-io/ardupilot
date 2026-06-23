@@ -535,7 +535,7 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
             sb_rth_plan_t* rth_plan = sb_screenplay_get_rth_plan(&new_screenplay);
             sb_rth_plan_entry_t rth_plan_entry;
             float rth_start_time = static_cast<float>(scene_header->scene_id & 0x3FFF);
-            if (rth_plan == NULL || sb_rth_plan_evaluate_at(rth_plan, rth_start_time, &rth_plan_entry) != SB_SUCCESS) {
+            if (rth_plan == nullptr || sb_rth_plan_evaluate_at(rth_plan, rth_start_time, &rth_plan_entry) != SB_SUCCESS) {
                 // Could not evaluate RTH plan at the given time
                 _time_axis_configuration_last_error = 6;
                 goto exit;
@@ -548,7 +548,6 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
             {
                 sb_trajectory_t* rth_trajectory = sb_trajectory_new();
                 sb_trajectory_player_t player;
-                sb_vector3_with_yaw_t start_with_yaw;
                 sb_vector3_t start;
                 
                 if (rth_trajectory == nullptr) {
@@ -558,6 +557,8 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
                 }
 
                 if (_show_controller.trajectory_player != nullptr) {
+                    sb_vector3_with_yaw_t start_with_yaw;
+
                     // We have started the show and the show controller has a trajectory
                     // player so we can clone it to find out the position of the drone
                     // at the start of the RTH plan, then construct a trajectory from
@@ -578,6 +579,8 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
                     start.x = start_with_yaw.x;
                     start.y = start_with_yaw.y;
                     start.z = start_with_yaw.z;
+
+                    sb_trajectory_player_destroy(&player);
                 } else {
                     // No trajectory player yet. This may happen if the CRTH command
                     // arrives during the "Waiting for start time" or "Takeoff" phases.
@@ -612,8 +615,6 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
 
                 sb_screenplay_scene_set_trajectory(scene, rth_trajectory);
                 SB_DECREF(rth_trajectory);
-
-                sb_trajectory_player_destroy(&player);
                 
                 // Log the details of the CRTH trigger for debugging purposes
                 write_crth_trigger_log_message(rth_start_time, start);
