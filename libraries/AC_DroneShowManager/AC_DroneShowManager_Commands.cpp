@@ -544,11 +544,6 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
             // Update scene tag to mark it as a CRTH scene
             sb_screenplay_scene_set_tag(scene, SceneTag_CRTH);
 
-            // rth_plan_entry contains the start time of the RTH plan, but we don't
-            // need that -- we want to create a trajectory that starts at T=0 in
-            // show clock because the clock of the new RTH scene starts from 0
-            rth_plan_entry.time_sec = 0.0f;
-
             // Create a trajectory based on rth_plan_entry and set it to the scene
             {
                 sb_trajectory_t* rth_trajectory = sb_trajectory_new();
@@ -561,29 +556,52 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
                     _time_axis_configuration_last_error = 7;
                     goto exit;
                 }
-                
-                if (_show_controller.trajectory_player == nullptr) {
-                    // should not happen
-                    _time_axis_configuration_last_error = 8;
-                    goto exit;
+
+                if (_show_controller.trajectory_player != nullptr) {
+                    // We have started the show and the show controller has a trajectory
+                    // player so we can clone it to find out the position of the drone
+                    // at the start of the RTH plan, then construct a trajectory from
+                    // there according to the plan.
+                    if (sb_trajectory_player_clone(&player, _show_controller.trajectory_player) != SB_SUCCESS) {
+                        // should not happen
+                        _time_axis_configuration_last_error = 9;
+                        goto exit;
+                    }
+                    
+                    if (sb_trajectory_player_get_position_at(&player, rth_start_time, &start_with_yaw) != SB_SUCCESS) {
+                        // should not happen
+                        _time_axis_configuration_last_error = 10;
+                        sb_trajectory_player_destroy(&player);
+                        goto exit;
+                    }
+                    
+                    start.x = start_with_yaw.x;
+                    start.y = start_with_yaw.y;
+                    start.z = start_with_yaw.z;
+                } else {
+                    // No trajectory player yet. This may happen if the CRTH command
+                    // arrives during the "Waiting for start time" or "Takeoff" phases.
+                    // In that case we just need to create a landing trajectory.
+                    if (_stage_in_drone_show_mode == DroneShow_WaitForStartTime ||
+                        _stage_in_drone_show_mode == DroneShow_Takeoff) {
+                        start.x = _takeoff_position_mm.x;
+                        start.y = _takeoff_position_mm.y;
+                        start.z = _takeoff_position_mm.z;
+
+                        sb_rth_plan_entry_clear(&rth_plan_entry, rth_plan, 0.0f);
+                    } else {
+                        // We are in an unexpected stage; we cannot create a valid RTH
+                        // trajectory
+                        _time_axis_configuration_last_error = 8;
+                        goto exit;
+                    }
                 }
-                
-                if (sb_trajectory_player_clone(&player, _show_controller.trajectory_player) != SB_SUCCESS) {
-                    // should not happen
-                    _time_axis_configuration_last_error = 9;
-                    goto exit;
-                }
-                
-                if (sb_trajectory_player_get_position_at(&player, rth_start_time, &start_with_yaw) != SB_SUCCESS) {
-                    // should not happen
-                    _time_axis_configuration_last_error = 10;
-                    sb_trajectory_player_destroy(&player);
-                    goto exit;
-                }
-                
-                start.x = start_with_yaw.x;
-                start.y = start_with_yaw.y;
-                start.z = start_with_yaw.z;
+
+                // rth_plan_entry contains the start time of the RTH plan, but we don't
+                // need that -- we want to create a trajectory that starts at T=0 in
+                // show clock because the clock of the new RTH scene starts from 0
+                rth_plan_entry.time_sec = 0.0f;
+    
                 if (sb_trajectory_update_from_rth_plan_entry(rth_trajectory, &rth_plan_entry, start) != SB_SUCCESS) {
                     // Could not create RTH plan trajectory
                     _time_axis_configuration_last_error = 11;
