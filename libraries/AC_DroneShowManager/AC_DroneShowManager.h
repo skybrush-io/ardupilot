@@ -16,7 +16,6 @@
 
 #include <GCS_MAVLink/ap_message.h>
 
-#include <cstdint>
 #include <skybrush/skybrush.h>
 
 #include "DroneShow_CustomPackets.h"
