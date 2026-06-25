@@ -155,10 +155,10 @@ public:
         if (max_brightness < _min_brightness_scaled) {
             red = green = blue = white = 0;
         } else {
-            red = _last_red;
-            green = _last_green;
-            blue = _last_blue;
-            white = _last_white;
+            red   = _gamma_lookup_table[_last_red];
+            green = _gamma_lookup_table[_last_green];
+            blue  = _gamma_lookup_table[_last_blue];
+            white = _gamma_lookup_table[_last_white];
         }
 
         if (set_raw_rgbw(red, green, blue, white)) {
