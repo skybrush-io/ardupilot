@@ -534,6 +534,7 @@ void ModeDroneShow::takeoff_start()
 
     // now that we are past the basic checks, we can commit ourselves to entering
     // takeoff mode
+    show_manager.notify_takeoff_started();
     _set_stage(DroneShow_Takeoff);
     
     // early exit if the motor output is prevented

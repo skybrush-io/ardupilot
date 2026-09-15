@@ -457,6 +457,11 @@ public:
     // The drone show manager may decide to cancel the takeoff by returning false.
     bool notify_takeoff_attempt() WARN_IF_UNUSED;
 
+    // Notifies the drone show manager that a takeoff has started.
+    // The drone show manager may act on it but is not allowed to cancel the takeoff at
+    // this point.
+    void notify_takeoff_started();
+
     // Handler for the MAVLink CMD_USER1 message that allows the user to reload _or_ clear the show
     bool reload_or_clear_show(bool do_clear) WARN_IF_UNUSED;
 

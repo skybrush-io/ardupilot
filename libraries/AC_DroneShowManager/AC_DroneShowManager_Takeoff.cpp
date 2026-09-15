@@ -77,6 +77,16 @@ bool AC_DroneShowManager::notify_takeoff_attempt()
         return false;
     }
 
+    return true;
+}
+
+void AC_DroneShowManager::notify_takeoff_started()
+{
+    Location takeoff_location;
+    sb_trajectory_t* trajectory;
+    sb_vector3_t end;
+    float land_speed_mm_s;
+
     // If the trajectory is circular (i.e. drone is supposed to land where it
     // took off from), tweak the end of the trajectory to account for placement
     // inaccuracies (we want to land where we took off from, not where we
@@ -84,38 +94,37 @@ bool AC_DroneShowManager::notify_takeoff_attempt()
     //
     // This correction is nice to have but is not crucial. If an error happens
     // in the process below, we just bail out and proceed without the correction.
-    if (
-        _has_option(DroneShowOption_CorrectLandingPositionForCircularTrajectories) &&
-        _trajectory_is_circular && !_trajectory_modified_for_landing
+    if (!_has_option(DroneShowOption_CorrectLandingPositionForCircularTrajectories) ||
+        !_trajectory_is_circular || _trajectory_modified_for_landing
     ) {
-        Location takeoff_location;
-        sb_trajectory_t* trajectory;
-        sb_vector3_t end;
-        float land_speed_mm_s;
-
-        if (!get_current_location(takeoff_location))
-        {
-            goto exit;
-        }
-
-        _show_coordinate_system.convert_global_to_show_coordinate(takeoff_location, end);
-        
-        // Get a handle to the current trajectory from the show controller so we can
-        // modify its end point
-        trajectory = sb_screenplay_scene_get_trajectory(&_main_show_scene);
-        if (trajectory != nullptr)
-        {
-            land_speed_mm_s = get_landing_speed_m_sec() * 1000.0f;   /* [mm/s] */
-            if (sb_trajectory_replace_end_to_land_at(trajectory, &_trajectory_stats, end, land_speed_mm_s)) {
-                goto exit;
-            }
-
-            _trajectory_modified_for_landing = true;
-        }
+        return;
+    }
+    
+    if (!get_current_location(takeoff_location))
+    {
+        return;
     }
 
-exit:
-    return true;
+    _show_coordinate_system.convert_global_to_show_coordinate(takeoff_location, end);
+    
+    gcs().send_text(MAV_SEVERITY_INFO, "end.z before = %f", end.z);
+    end.z += get_takeoff_altitude_cm() * 5; /* [cm] --> [mm] */
+    gcs().send_text(MAV_SEVERITY_INFO, "end.z = %f", end.z);
+
+    // Get a handle to the current trajectory from the show controller so we can
+    // modify its end point
+    trajectory = sb_screenplay_scene_get_trajectory(&_main_show_scene);
+    if (trajectory == nullptr)
+    {
+        return;
+    }
+    
+    land_speed_mm_s = get_landing_speed_m_sec() * 1000.0f;   /* [mm/s] */
+    if (sb_trajectory_replace_end_to_land_at(trajectory, &_trajectory_stats, end, land_speed_mm_s)) {
+        return;
+    }
+
+    _trajectory_modified_for_landing = true;
 }
 
 bool AC_DroneShowManager::_is_at_takeoff_position_xy(float xy_threshold) const
