@@ -106,10 +106,10 @@ void AC_DroneShowManager::notify_takeoff_started()
     }
 
     _show_coordinate_system.convert_global_to_show_coordinate(takeoff_location, end);
-    
-    gcs().send_text(MAV_SEVERITY_INFO, "end.z before = %f", end.z);
+
+    // Correction is applied in a way that the horizontal correction is done when we
+    // are halfway through the landing (at 50% of the takeoff altitude)
     end.z += get_takeoff_altitude_cm() * 5; /* [cm] --> [mm] */
-    gcs().send_text(MAV_SEVERITY_INFO, "end.z = %f", end.z);
 
     // Get a handle to the current trajectory from the show controller so we can
     // modify its end point
