@@ -479,6 +479,11 @@ public:
     // this point.
     void notify_takeoff_started();
 
+    // Proposes an altitude where the control should be handed over to ArduPilot's
+    // land mode, in millimeters. Used during precision landing (see the appropriate
+    // bit in SHOW_OPTIONS) and during collective RTH.
+    float propose_landing_handover_altitude_mm() const;
+
     // Handler for the MAVLink CMD_USER1 message that allows the user to reload _or_ clear the show
     bool reload_or_clear_show(bool do_clear) WARN_IF_UNUSED;
 

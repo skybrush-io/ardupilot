@@ -37,3 +37,19 @@ float AC_DroneShowManager::get_landing_speed_m_sec() const {
 
     return DEFAULT_LANDING_SPEED_METERS_PER_SEC;
 }
+
+float AC_DroneShowManager::propose_landing_handover_altitude_mm() const {
+    float takeoff_altitude_mm = get_takeoff_altitude_mm();
+    float proposal = get_landing_altitude_mm();
+
+    if (proposal >= takeoff_altitude_mm) {
+        // fallback
+        proposal = takeoff_altitude_mm * 0.5f;
+        if (proposal > 1000.0f) {
+            proposal = 1000.0f;
+        }
+    }
+
+    // sanity check
+    return proposal < 0 ? 0 : proposal;
+}
