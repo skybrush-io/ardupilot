@@ -649,6 +649,11 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
             ptr += sizeof(CustomPackets::time_axis_config_scene_entry_t);
     
             if (entry->duration_msec == 0) {
+                // This is a special segment that indicates that the duration of the
+                // scene is dynamic and depends on the trajectory. We need to set a
+                // flag on the scene to indicate this, and calculate the actual duration
+                // of the segment based on the trajectory itself.
+                sb_screenplay_scene_set_flag(scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
                 if (!_ensure_scene_covers_relevant_part_of_trajectory(
                     scene, entry->initial_rate_scaled / 65535.0f,
                     entry->final_rate_scaled / 65535.0f

@@ -7,7 +7,6 @@
 
 #include "AC_DroneShowManager.h"
 #include "DroneShow_Constants.h"
-#include "skybrush/rth_plan.h"
 
 extern const AP_HAL::HAL &hal;
 
@@ -204,41 +203,25 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     {
         // Adjust the timestamps of pyro events if needed. Also set the duration of
         // each scene to the duration of its trajectory to ensure that we consider the
-        // show as finished when the trajectory ends.
+        // show as finished when the trajectory ends. The last (currently the only)
+        // scene is also marked as dynamic so we know that we are free to adjust its
+        // duration later if the trajectory changes (e.g., after takeoff, when the
+        // trajectory is circular and we need to compensate for the actual takeoff
+        // position).
         size_t i, num_scenes = sb_screenplay_size(&_screenplay);
         for (i = 0; i < num_scenes; i++)
         {
             sb_screenplay_scene_t* scene = sb_screenplay_get_scene_ptr(&_screenplay, i);
             sb_event_list_t* event_list = scene ? sb_screenplay_scene_get_events(scene) : nullptr;
             sb_trajectory_t* trajectory = scene ? sb_screenplay_scene_get_trajectory(scene) : nullptr;
-            
+            bool is_last = (i == num_scenes - 1);
+
             if (trajectory) {
-                if (i == 0) {
-                    // Special case: first scene is the main show scene so we need to
-                    // set the trajectory duration so that it matches the time when we
-                    // need to switch from our control to ArduPilot's landing algorithm.
-                    // 
-                    // If the trajectory is not circular _or_ we are not correcting the
-                    // end of the trajectory based on actual placement, then we can
-                    // switch over at landing_time (from _trajectory_stats). However,
-                    // _if_ we are correcting the end of the trajectory, then we need to
-                    // switch over at roughly halfway through the descent from
-                    // SHOW_TAKEOFF_ALT because the correction is designed to take place
-                    // in the first half.
-                    // 
-                    // However, since we don't know whether there will be a correction
-                    // at takeoff or not (SHOW_OPTIONS can change between the time when
-                    // the show is loaded and the time when the show starts), the
-                    // easiest is simply to hand control over at halfway between
-                    // landing_time and the full duration of the landing trajectory.
-                    sb_screenplay_scene_set_duration_msec(
-                        scene,
-                            (_trajectory_stats.landing_time_sec * 1000.0f +
-                             _trajectory_stats.duration_msec) / 2.0f
-                    );
-                } else {
-                    sb_screenplay_scene_set_duration_msec(scene, _trajectory_stats.duration_msec);
-                }
+                sb_screenplay_scene_set_duration_msec(scene,
+                    is_last
+                        ? static_cast<uint32_t>(_trajectory_stats.landing_time_sec * 1000.0f)
+                        : _trajectory_stats.duration_msec
+                );
             }
 
             if (event_list && _params.pyro_spec.time_compensation_msec != 0)
@@ -247,6 +230,10 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
                     event_list, SB_EVENT_TYPE_PYRO,
                     -_params.pyro_spec.time_compensation_msec
                 );
+            }
+
+            if (is_last) {
+                sb_screenplay_scene_set_flag(scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
             }
         }
     }

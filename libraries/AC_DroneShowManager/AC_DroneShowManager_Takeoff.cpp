@@ -84,8 +84,13 @@ void AC_DroneShowManager::notify_takeoff_started()
 {
     Location takeoff_location;
     sb_trajectory_t* trajectory;
+    sb_screenplay_scene_t* scene;
+    sb_time_axis_t* time_axis;
     sb_vector3_t end;
     float land_speed_mm_s;
+    size_t i, num_scenes;
+    int32_t wall_clock_duration_msec;
+    uint32_t wall_clock_duration_msec_unsigned;
 
     // If the trajectory is circular (i.e. drone is supposed to land where it
     // took off from), tweak the end of the trajectory to account for placement
@@ -118,12 +123,39 @@ void AC_DroneShowManager::notify_takeoff_started()
     {
         return;
     }
-    
+
+    // Update the end of the trajectory
     land_speed_mm_s = get_landing_speed_m_sec() * 1000.0f;   /* [mm/s] */
     if (sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
         trajectory, &_trajectory_stats, end, land_speed_mm_s, land_speed_mm_s
     ) != SB_SUCCESS) {
         return;
+    }
+
+    // For the _last_ scene of the screenplay, we need to make sure that it plays the
+    // trajectory in full _if_ the last scene is marked as dynamic (meaning that we
+    // can tweak its length freely) _and_ it is playing the trajectory that we have
+    // just modified.
+    num_scenes = sb_screenplay_size(&_screenplay);
+    if (num_scenes > 0) {
+        i = num_scenes - 1;
+        scene = sb_screenplay_get_scene_ptr(&_screenplay, i);
+        if (
+            scene &&
+            sb_screenplay_scene_get_trajectory(scene) == trajectory &&
+            sb_screenplay_scene_has_flag(scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION)
+        ) {
+            time_axis = sb_screenplay_scene_get_time_axis(scene);
+            wall_clock_duration_msec = sb_time_axis_reverse_map(time_axis, _trajectory_stats.duration_sec);
+            if (wall_clock_duration_msec <= 0) {
+                // This should not happen, but if it does, we just set the duration to
+                // 1 msec to avoid a crash
+                wall_clock_duration_msec_unsigned = 1;
+            } else {
+                wall_clock_duration_msec_unsigned = static_cast<uint32_t>(wall_clock_duration_msec);
+            }
+            sb_screenplay_scene_set_duration_msec(scene, wall_clock_duration_msec_unsigned);
+        }
     }
 
     _trajectory_modified_for_landing = true;
