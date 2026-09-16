@@ -186,6 +186,15 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("TAKEOFF_ERR", 15, AC_DroneShowManager, _params.max_xy_placement_error_m, DEFAULT_XY_PLACEMENT_ERROR_METERS),
 
+    // @Param: LAND_ALT
+    // @DisplayName: Landing altitude where control is handed back to ArduPilot
+    // @Description: Altitude above the takeoff position where control is handed back to ArduPilot at the end of a show. The drone will descend to this altitude and then switch to the post-show flight mode (RTL, Land or Loiter). Negative means same as the takeoff altitude.
+    // @Range: -1 5
+    // @Increment: 0.1
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("LAND_ALT", 41, AC_DroneShowManager, _params.landing_altitude_m, DEFAULT_LANDING_ALTITUDE_METERS),
+
     // @Param: SYNC_MODE
     // @DisplayName: Time synchronization mode
     // @Description: Time synchronization mode to use when starting the show
@@ -329,7 +338,7 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("MAX_ESC_ERR", 39, AC_DroneShowManager, _params.max_esc_error_rate_pcnt, DEFAULT_MAX_ESC_ERROR_RATE_PCNT),
 
-    // Currently used max parameter ID: 40; update this if you add more parameters.
+    // Currently used max parameter ID: 41; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND

@@ -272,6 +272,20 @@ public:
     // Returns the current stage that the drone show mode is in
     DroneShowModeStage get_stage_in_drone_show_mode() const { return _stage_in_drone_show_mode; }
 
+    // Returns the altitude where we should hand control over to ArduPilot's land mode,
+    // in centimeters.
+    int32_t get_landing_altitude_cm() const {
+        return get_landing_altitude_mm() / 10;
+    }
+
+    // Returns the altitude where we should hand control over to ArduPilot's land mode,
+    // in millimeters.
+    int32_t get_landing_altitude_mm() const {
+        return _params.landing_altitude_m >= 0
+            ? _params.landing_altitude_m * 1000.0f
+            : get_takeoff_altitude_mm();
+    }
+
     // Returns the landing speed in meters per second
     float get_landing_speed_m_sec() const;
 
@@ -638,6 +652,9 @@ private:
 
         // Takeoff altitude
         AP_Float takeoff_altitude_m;
+
+        // Landing altitude; negative means same as takeoff altitude
+        AP_Float landing_altitude_m;
 
         // Time synchronization mode
         AP_Int8 time_sync_mode;

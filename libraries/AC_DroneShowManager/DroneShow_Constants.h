@@ -24,6 +24,10 @@
 // will take off to this altitude above its current position.
 #define DEFAULT_TAKEOFF_ALTITUDE_METERS 2.5f
 
+// Default altitude to hand control back to ArduPilot's land mode at the end of a
+// show, in meters. Negative means same as takeoff altitude.
+#define DEFAULT_LANDING_ALTITUDE_METERS -1.0f
+
 // Default time synchronization mode
 #define DEFAULT_SYNC_MODE TimeSyncMode_GPS
 

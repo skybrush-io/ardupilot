@@ -112,9 +112,26 @@ void AC_DroneShowManager::notify_takeoff_started()
 
     _show_coordinate_system.convert_global_to_show_coordinate(takeoff_location, end);
 
-    // Correction is applied in a way that the horizontal correction is done when we
-    // are halfway through the landing (at 50% of the takeoff altitude)
-    end.z += get_takeoff_altitude_cm() * 5; /* [cm] --> [mm] */
+    // Correction is applied in a way that the horizontal correction is done during
+    // the descent from SHOW_TAKEOFF_ALT to SHOW_LAND_ALT when SHOW_LAND_ALT is
+    // smaller than SHOW_TAKEOFF_ALT. When SHOW_LAND_ALT is larger than or equal to
+    // SHOW_TAKEOFF_ALT, we still need some time to do the correction so in this
+    // case we fall back to a simple rule: we leave 50% of SHOW_TAKEOFF_ALT for
+    // correction, but never more than 1m.
+    float takeoff_altitude_mm = get_takeoff_altitude_mm();
+    float altitude_for_correction_mm = get_landing_altitude_mm();
+    if (altitude_for_correction_mm >= takeoff_altitude_mm) {
+        // fallback
+        altitude_for_correction_mm = takeoff_altitude_mm * 0.5f;
+        if (altitude_for_correction_mm > 1000.0f) {
+            altitude_for_correction_mm = 1000.0f;
+        }
+    }
+    if (altitude_for_correction_mm < 0) {
+        // sanity check
+        altitude_for_correction_mm = 0;
+    }
+    end.z += altitude_for_correction_mm;
 
     // Get a handle to the current trajectory from the show controller so we can
     // modify its end point
