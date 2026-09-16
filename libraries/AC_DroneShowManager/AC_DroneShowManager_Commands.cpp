@@ -616,6 +616,14 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
                     }
                 }
 
+                float landing_handover_altitude_mm = propose_landing_handover_altitude_mm();
+                if (rth_plan_entry.landing_altitude < landing_handover_altitude_mm) {
+                    // The RTH plan indicates a landing altitude that is lower than the
+                    // handover altitude. Make sure we hand control over to ArduPilot's
+                    // land mode at the handover altitude anyway.
+                    rth_plan_entry.landing_altitude = landing_handover_altitude_mm;
+                }
+                
                 if (sb_trajectory_update_from_rth_plan_entry(rth_trajectory, &rth_plan_entry, start) != SB_SUCCESS) {
                     // Could not create RTH plan trajectory
                     sb_trajectory_player_destroy(&player);
