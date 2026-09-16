@@ -299,6 +299,9 @@ public:
     // Returns the altitude to take off to above the current position of the drone, in centimeters
     int32_t get_takeoff_altitude_cm() const { return _params.takeoff_altitude_m * 100.0f; }
 
+    // Returns the altitude to take off to above the current position of the drone, in millimeters
+    int32_t get_takeoff_altitude_mm() const { return _params.takeoff_altitude_m * 1000.0f; }
+
     // Returns the takeoff speed in meters per second
     float get_takeoff_speed_m_sec() const;
 

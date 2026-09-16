@@ -295,7 +295,12 @@ bool AC_DroneShowManager::_recalculate_trajectory_properties()
     _trajectory_stats.takeoff_time_sec = _trajectory_stats.landing_time_sec = -1;
     _trajectory_is_circular = false;
 
-    stats_calculator.min_ascent = get_takeoff_altitude_cm() * 10.0f; /* [mm] */
+    // Note that we don't use get_landing_altitude_mm() here. If we need to adjust for
+    // placement errors at the end of the trajectory, we need a real difference between
+    // the takeoff and landing altitudes such that we start the placement correction
+    // at the takeoff altitude (say, 2.5m) and end the correction at the landing
+    // altitude (say, 1m).
+    stats_calculator.min_ascent = get_takeoff_altitude_mm();
     stats_calculator.preferred_descent = stats_calculator.min_ascent;
     stats_calculator.takeoff_speed = get_takeoff_speed_m_sec() * 1000.0f; /* [mm/s] */
     stats_calculator.acceleration = get_takeoff_acceleration_m_ss() * 1000.0f; /* [mm/s/s] */
