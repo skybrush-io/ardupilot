@@ -201,7 +201,8 @@ bool AC_DroneShowManager::_handle_custom_data_message(mavlink_channel_t chan, ui
             handled = _handle_acknowledgment_packet(data, length);
             break;
 
-        // Time axis configuration packet, used to implement suspension and resume
+        // Time axis configuration packet, used to implement suspension, resume and
+        // collective RTH
         case CustomPackets::TIME_AXIS_CONFIG:
             handled = _handle_time_axis_configuration_packet(data, length);
             break;
@@ -591,6 +592,30 @@ bool AC_DroneShowManager::_handle_time_axis_configuration_packet(void* data, uin
                 // show clock because the clock of the new RTH scene starts from 0
                 rth_plan_entry.time_sec = 0.0f;
     
+                // If the drone is configured to adjust for takeoff placement errors
+                // AND it is flying back to its takeoff position during CRTH, we need
+                // to adjust the indicated end coordinates of the RTH plan
+                // to account for the takeoff placement error.
+                if (
+                    _trajectory_is_circular &&
+                    _trajectory_modified_for_landing &&
+                    (rth_plan_entry.flags & SB_RTH_PLAN_ENTRY_HAS_TARGET_XY)
+                ) {
+                    float dist_mm = hypotf(
+                        rth_plan_entry.landing_target.x - _trajectory_stats.initial_pos.x,
+                        rth_plan_entry.landing_target.y - _trajectory_stats.initial_pos.y
+                    );
+                    if (dist_mm / 1000.0f /* [mm] --> [m] */ < DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS) {
+                        // The landing target is very close to the initial position of the
+                        // trajectory, so we assume that the RTH plan is meant to land at
+                        // the takeoff position. We know the X and Y coordinates of the
+                        // takeoff position from _trajectory_stats, which has been adjusted
+                        // at takeoff time
+                        rth_plan_entry.landing_target.x = _trajectory_stats.pos_at_landing_time.x;
+                        rth_plan_entry.landing_target.y = _trajectory_stats.pos_at_landing_time.y;
+                    }
+                }
+
                 if (sb_trajectory_update_from_rth_plan_entry(rth_trajectory, &rth_plan_entry, start) != SB_SUCCESS) {
                     // Could not create RTH plan trajectory
                     sb_trajectory_player_destroy(&player);
