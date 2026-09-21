@@ -400,6 +400,7 @@ public:
 
         // inputs 248-249 are reserved for the Skybrush fork at
         // https://github.com/skybrush-io/ardupilot
+        DRONE_SHOW_START =   248, // drone show control -- start switch
 
 #if AP_SCRIPTING_ENABLED
         // inputs for the use of onboard lua scripting

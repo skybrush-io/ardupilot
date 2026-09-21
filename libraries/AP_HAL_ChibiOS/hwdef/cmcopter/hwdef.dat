@@ -1,0 +1,6 @@
+# hw definition file for processing by chibios_hwdef.py
+# for cmcopter, based on Pixhawk1
+
+include ../Pixhawk1/hwdef.dat
+
+define COLLMOT_HACKS_FRSKY_SHORTER_FINAL_PPMSUM_PULSE

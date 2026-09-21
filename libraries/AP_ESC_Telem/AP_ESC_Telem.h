@@ -108,6 +108,9 @@ public:
         return _telem_data[esc_index].last_update_ms;
     }
 
+    // returns whether at least one ESC is reporting a high error rate
+    bool has_high_error_rate(float threshold = 0.2f) const;
+
     // send telemetry data to mavlink
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
 

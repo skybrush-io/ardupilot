@@ -205,6 +205,9 @@ void Copter::failsafe_ekf_event()
                 set_mode_land_with_pause(ModeReason::EKF_FAILSAFE);
             }
             break;
+        case FS_EKF_ACTION_DISARM:
+            force_disarm_without_questions(AP_Arming::Method::EKFFAILSAFE);
+            break;
         case FS_EKF_ACTION_LAND:
         case FS_EKF_ACTION_LAND_EVEN_STABILIZE:
         default:
@@ -212,7 +215,11 @@ void Copter::failsafe_ekf_event()
             break;
     }
 
-    gcs().send_text(MAV_SEVERITY_CRITICAL, "EKF Failsafe: changed to %s Mode", flightmode->name());
+    if (g.fs_ekf_action == FS_EKF_ACTION_DISARM) {
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "EKF Failsafe: forced disarm");
+    } else {
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "EKF Failsafe: changed to %s Mode", flightmode->name());
+    }
 }
 
 // failsafe_ekf_off_event - actions to take when EKF failsafe is cleared

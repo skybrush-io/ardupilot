@@ -704,4 +704,25 @@ bool GCS::sysid_is_gcs(uint8_t _sysid) const
     return _sysid >= mav_gcs_sysid && _sysid <= mav_gcs_sysid_high;
 }
 
+/*
+  Injection of a dummy COMMAND_INT packet from other modules. This is used by
+  the drone show module to implement commands that are limited by the SHOW_GROUP
+  parameter to certain groups of drones (used to break through the MAVLink
+  one-byte system ID limitation).
+
+  This is copied from lua_command_int_packet()
+*/
+MAV_RESULT GCS::inject_command_int_packet(const mavlink_command_int_t &packet)
+{
+    // for now we assume channel 0. In the future we may create a dedicated channel
+    auto *ch = chan(0);
+    if (ch == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+    // we need a dummy message for some calls
+    mavlink_message_t msg {};
+
+    return ch->handle_command_int_packet(packet, msg);
+}
+
 #endif  // HAL_GCS_ENABLED

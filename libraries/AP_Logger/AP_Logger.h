@@ -101,6 +101,8 @@ enum class LogEvent : uint8_t {
     NOT_SURFACED = 164,
     BOTTOMED = 165,
     NOT_BOTTOMED = 166,
+
+    DRONE_SHOW_START = 248,
 };
 
 enum class LogDataID : uint8_t {

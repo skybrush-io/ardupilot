@@ -1573,6 +1573,10 @@ void GCS_MAVLINK::update_send()
 #if HAL_MAVLINK_INTERVALS_FROM_FILES_ENABLED
         initialise_message_intervals_from_config_files();
 #endif
+
+        // allow further customization of message intervals in derived classes
+        initialise_custom_message_intervals();
+
         deferred_messages_initialised = true;
     }
 

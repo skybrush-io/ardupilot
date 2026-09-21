@@ -690,6 +690,17 @@ bool AP_Relay::send_relay_status(const GCS_MAVLINK &link) const
 }
 #endif  // AP_MAVLINK_MSG_RELAY_STATUS_ENABLED
 
+uint32_t AP_Relay::get_index_mask(AP_Relay_Params::FUNCTION function) const
+{
+    uint32_t mask = 0;
+    for (uint8_t i = 0; i < ARRAY_SIZE(_params); i++) {
+        if (_params[i].function == function) {
+            mask |= (1U << i);
+        }
+    }
+    return mask;
+}
+
 namespace AP {
 
 AP_Relay *relay()

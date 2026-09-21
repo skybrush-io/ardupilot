@@ -32,6 +32,8 @@
 
 #include "ap_message.h"
 
+#include "MessageCounter.h"
+
 #define GCS_DEBUG_SEND_MESSAGE_TIMINGS 0
 
 #ifndef HAL_GCS_ALLOW_PARAM_SET_DEFAULT
@@ -188,6 +190,8 @@ public:
     // accessors used to retrieve objects used for parsing incoming messages:
     mavlink_message_t *channel_buffer() { return &_channel_buffer; }
     mavlink_status_t *channel_status() { return &_channel_status; }
+
+    MessageCounter& rtcm_message_counter() { return _msg_counter; }
 
     void        update_receive(uint32_t max_time_us=1000);
     void        update_send();
@@ -802,6 +806,11 @@ protected:
     // methods to extract a Location object from a command_int
     bool location_from_command_t(const mavlink_command_int_t &in, Location &out);
 
+    // set the interval at which an ap_message should be emitted (in ms)
+    // Moved here from the private section in upstream code because we need to
+    // call it from GCS_MAVLink_Copter
+    bool set_ap_message_interval(enum ap_message id, uint16_t interval_ms);
+
 private:
 
     // define the two objects used for parsing incoming messages:
@@ -930,13 +939,13 @@ private:
     // try_send_message, will cause a mavlink message with that id to
     // be emitted.  Returns MSG_LAST if no such mapping exists.
     ap_message mavlink_id_to_ap_message_id(const uint32_t mavlink_id) const;
-    // set the interval at which an ap_message should be emitted (in ms)
-    bool set_ap_message_interval(enum ap_message id, uint16_t interval_ms);
     // call set_ap_message_interval for each entry in a stream,
     // the interval being based on the stream's rate
     void initialise_message_intervals_for_stream(GCS_MAVLINK::streams id);
     // call initialise_message_intervals_for_stream on every stream:
     void initialise_message_intervals_from_streamrates();
+    // hook function to allow customization of message intervals in derived classes
+    virtual void initialise_custom_message_intervals() {};
     // boolean that indicated that message intervals have been set
     // from streamrates:
     bool deferred_messages_initialised;
@@ -1045,6 +1054,8 @@ private:
     bool signing_enabled(void) const;
     static void save_signing_timestamp(bool force_save_now);
 #endif  // AP_MAVLINK_SIGNING_ENABLED
+
+    MessageCounter _msg_counter;
 
 #if HAL_MAVLINK_INTERVALS_FROM_FILES_ENABLED
     // structure containing default intervals read from files for this
@@ -1298,6 +1309,9 @@ public:
     // lua access to command_int
     MAV_RESULT lua_command_int_packet(const mavlink_command_int_t &packet);
 #endif
+
+    // drone show module access to command_int
+    MAV_RESULT inject_command_int_packet(const mavlink_command_int_t &packet);
 
     // Sequence number should be incremented when available modes changes
     // Sent in AVAILABLE_MODES_MONITOR msg

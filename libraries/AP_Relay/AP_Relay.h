@@ -74,6 +74,9 @@ public:
     // see if the relay is enabled
     bool enabled(AP_Relay_Params::FUNCTION function) const;
 
+    // get index mask for a function
+    uint32_t get_index_mask(AP_Relay_Params::FUNCTION function) const;
+
     // Get the pin number of the instance (if assigned to a pin)
     bool get_pin_by_instance(uint8_t instance, uint8_t &pin) const;
 

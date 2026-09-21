@@ -178,6 +178,18 @@
 #endif
 #include "mode.h"
 
+#if MODE_DRONE_SHOW_ENABLED
+ #include "mode_drone_show.h"
+ #if AP_FENCE_ENABLED
+ #include <AC_BubbleFence/AC_BubbleFence.h>
+ #include <AC_HardFence/AC_HardFence.h>
+ #endif
+#endif
+
+#if COLLMOT_EXTENSIONS_ENABLED
+#include "collmot_flockctrl.h"
+#endif
+
 class Copter : public AP_Vehicle {
 public:
     friend class GCS_MAVLINK_Copter;
@@ -186,6 +198,10 @@ public:
     friend class Parameters;
     friend class ParametersG2;
     friend class AP_Avoidance_Copter;
+
+#if MODE_DRONE_SHOW_ENABLED
+    friend class AC_DroneShowManager_Copter;
+#endif
 
 #if AP_COPTER_ADVANCED_FAILSAFE_ENABLED
     friend class AP_AdvancedFailsafe_Copter;
@@ -227,6 +243,9 @@ public:
     friend class ModeZigZag;
     friend class ModeAutorotate;
     friend class ModeTurtle;
+#if MODE_DRONE_SHOW_ENABLED
+    friend class ModeDroneShow;
+#endif
 
     friend class _AutoTakeoff;
 
@@ -552,6 +571,11 @@ private:
     AP_Avoidance_Copter avoidance_adsb{adsb};
 #endif
 
+#if COLLMOT_EXTENSIONS_ENABLED
+    // CollMot-specific modifications
+    CollMotFlockCtrl collmot;
+#endif
+
     // last valid RC input time
     uint32_t last_radio_update_ms;
 
@@ -833,6 +857,17 @@ private:
 #if AP_FENCE_ENABLED
     void fence_check();
     void fence_checks_async() override;
+    void fence_and_show_specific_safety_features_check();
+#endif
+
+    // hard_fence.cpp
+#if MODE_DRONE_SHOW_ENABLED && AP_FENCE_ENABLED
+    void hard_fence_check();
+#endif
+
+    // bubble_fence.cpp
+#if MODE_DRONE_SHOW_ENABLED && AP_FENCE_ENABLED
+    void bubble_fence_check();
 #endif
 
     // heli.cpp
@@ -1102,10 +1137,16 @@ private:
 #if MODE_TURTLE_ENABLED
     ModeTurtle mode_turtle;
 #endif
+#if MODE_DRONE_SHOW_ENABLED
+    ModeDroneShow mode_drone_show;
+#endif
 
     // mode.cpp
     Mode *mode_from_mode_num(const Mode::Number mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
+
+    // force_disarm.cpp
+    void force_disarm_without_questions(const AP_Arming::Method method);
 
     bool started_rate_thread;
     bool using_rate_thread;

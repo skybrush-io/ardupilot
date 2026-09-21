@@ -106,6 +106,7 @@ public:
 
         // Mode number 127 reserved for the "drone show mode" in the Skybrush
         // fork at https://github.com/skybrush-io/ardupilot
+        DRONE_SHOW =   127, // Pre-programmed drone light show
     };
 
     // constructor
@@ -1236,6 +1237,12 @@ private:
 
     // guided mode is paused or not
     bool _paused;
+
+#if MODE_DRONE_SHOW_ENABLED
+    // Allows the drone show mode to access our internals for reporting purposes
+    friend class ModeDroneShow;
+#endif
+
 };
 
 #if AP_SCRIPTING_ENABLED
@@ -1393,6 +1400,11 @@ private:
 #if AC_PRECLAND_ENABLED
     bool _precision_loiter_enabled;
     bool _precision_loiter_active; // true if user has switched on prec loiter
+#endif
+
+#if MODE_DRONE_SHOW_ENABLED
+    // Allows the drone show mode to access our internals for reporting purposes
+    friend class ModeDroneShow;
 #endif
 
 };
@@ -1625,6 +1637,11 @@ private:
         IgnorePilotYaw    = (1U << 2),
     };
     bool option_is_enabled(Option option) const;
+
+#if MODE_DRONE_SHOW_ENABLED
+    // Allows the drone show mode to access our internals for reporting purposes
+    friend class ModeDroneShow;
+#endif
 
 };
 
@@ -2151,4 +2168,8 @@ private:
     } current_phase;
 
 };
+#endif
+
+#if MODE_DRONE_SHOW_ENABLED
+ # include "mode_drone_show.h"
 #endif

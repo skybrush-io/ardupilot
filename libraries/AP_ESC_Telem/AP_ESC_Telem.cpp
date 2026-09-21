@@ -395,6 +395,32 @@ bool AP_ESC_Telem::get_power_percentage(uint8_t esc_index, uint8_t& power_percen
 }
 #endif // AP_EXTENDED_ESC_TELEM_ENABLED
 
+// returns whether at least one ESC is reporting a high error rate. The threshold
+// is in percentages, from 0 to 100, similarly to _rpm_data[i].error_rate
+bool AP_ESC_Telem::has_high_error_rate(float threshold) const
+{
+    if (threshold < 0.0f) {
+        // negative threshold is invalid
+        return false;
+    }
+
+    for (uint8_t i = 0; i < ESC_TELEM_MAX_ESCS; i++) {
+        if (_telem_data[i].last_update_ms == 0 && !was_rpm_data_ever_reported(_rpm_data[i])) {
+            // have never seen telem from this ESC
+            continue;
+        }
+
+        // we consider stale data as well -- if the ESC is not reporting
+        // telemetry or RPM data any more, that is probably a cause for
+        // concern too
+        if (_rpm_data[i].error_rate > threshold) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // send ESC telemetry messages over MAVLink
 void AP_ESC_Telem::send_esc_telemetry_mavlink(uint8_t mav_chan)
 {

@@ -44,6 +44,8 @@
 #include "DShotLED.h"
 #include "ProfiLED_IOMCU.h"
 
+#include "DroneShowNotificationBackend.h"
+
 extern const AP_HAL::HAL& hal;
 
 AP_Notify *AP_Notify::_singleton;
@@ -405,6 +407,9 @@ void AP_Notify::add_backends(void)
 #ifdef WITH_SITL_RGBLED
     ADD_BACKEND(NEW_NOTHROW SITL_SFML_LED());
 #endif
+
+    // Drone show module related backend
+    ADD_BACKEND(NEW_NOTHROW DroneShowNotificationBackend());
 }
 
 // initialisation

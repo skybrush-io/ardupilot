@@ -1048,7 +1048,13 @@ void ModeGuided::set_yaw_state_rad(bool use_yaw, float yaw_rad, bool use_yaw_rat
     } else if (use_yaw_rate) {
         auto_yaw.set_rate_rad(yaw_rate_rads);
     } else {
-        auto_yaw.set_mode_to_default(false);
+#if COLLMOT_EXTENSIONS_ENABLED
+        if (copter.collmot.shouldResetToDefaultYawModeInGuidedMode()) {
+#endif
+            auto_yaw.set_mode_to_default(false);
+#if COLLMOT_EXTENSIONS_ENABLED
+        }
+#endif
     }
 }
 
