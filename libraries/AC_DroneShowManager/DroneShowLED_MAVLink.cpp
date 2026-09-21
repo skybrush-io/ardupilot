@@ -7,8 +7,8 @@
 static const char message_name[10] = "rgb";
 
 DroneShowLED_MAVLink::DroneShowLED_MAVLink(uint8_t instance) : DroneShowLED(),
-    _instance(instance),
-    _chan(MAVLINK_COMM_0)
+    _chan(MAVLINK_COMM_0),
+    _instance(instance)
 {
 }
 

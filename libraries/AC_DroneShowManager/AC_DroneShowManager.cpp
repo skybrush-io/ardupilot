@@ -36,18 +36,18 @@ AC_DroneShowManager::AC_DroneShowManager() :
 #endif
     _init_ok(false),
     _show_data(0),
-    _stage_in_drone_show_mode(DroneShow_Off),
+    _projected_wall_clock_time_at_takeoff_sec(NAN),
     _start_time_requested_by(StartTimeSource::NONE),
     _start_time_on_internal_clock_usec(0),
     _start_time_unix_usec(0),
+    _stage_in_drone_show_mode(DroneShow_Off),
     _trajectory_is_circular(false),
     _controller_update_delta_msec(1000 / DEFAULT_UPDATE_RATE_HZ),
     _pyro_device(0),
     _rgb_led(0),
+    _last_time_axis_config_seq_no(0xFFFF),    // 0xFFFF is never a valid sequence number
     _rc_switches_blocked_until(0),
-    _boot_count(0),
-    _projected_wall_clock_time_at_takeoff_sec(NAN),
-    _last_time_axis_config_seq_no(0xFFFF)    // 0xFFFF is never a valid sequence number
+    _boot_count(0)
 {
     bool ok = true;
 
