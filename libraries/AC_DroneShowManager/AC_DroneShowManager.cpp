@@ -180,7 +180,7 @@ AC_BubbleFence::FenceAction AC_DroneShowManager::get_bubble_fence_action()
 
 bool AC_DroneShowManager::get_current_guided_mode_command_to_send(
     GuidedModeCommand& command,
-    int32_t default_yaw_cd,
+    float default_yaw_rad,
     bool altitude_locked_above_takeoff_altitude
 ) {
     Location loc;
@@ -192,11 +192,11 @@ bool AC_DroneShowManager::get_current_guided_mode_command_to_send(
     // static uint8_t counter = 0;
 
     float elapsed = get_elapsed_time_since_start_sec();
-    float yaw_cd = default_yaw_cd;
+    float yaw_cd = degrees(default_yaw_rad) * 100.0f;
     float yaw_rate_cd_s = 0;
     
     command.clear();
-    command.yaw_cd = default_yaw_cd;
+    command.yaw_cd = yaw_cd;
 
     if (!get_desired_global_position_at_seconds(elapsed, loc))
     {

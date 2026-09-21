@@ -102,9 +102,9 @@ bool ModeDroneShow::do_user_takeoff_start_m(float takeoff_alt_m)
     }
 }
 
-int32_t ModeDroneShow::get_default_yaw_cd() const
+float ModeDroneShow::get_default_yaw_rad() const
 {
-    return copter.initial_armed_bearing;
+    return copter.initial_armed_bearing_rad;
 }
 
 int32_t ModeDroneShow::get_elapsed_time_since_last_home_position_reset_attempt_msec() const
@@ -571,9 +571,9 @@ void ModeDroneShow::takeoff_start()
     // be zero if it was never used) and slowly slew to the desired angle. We
     // force the current yaw angle to be initialized by also calling
     // set_yaw_angle_rate(), which seems to set the internal yaw angle immediately
-    auto_yaw.set_yaw_angle_and_rate_rad(radians(get_default_yaw_cd() * 0.01f), 0);
+    auto_yaw.set_yaw_angle_and_rate_rad(get_default_yaw_rad(), 0);
     auto_yaw.set_fixed_yaw_rad(
-        radians(get_default_yaw_cd() * 0.01f),
+        get_default_yaw_rad(),
         /* turn_rate_rads = */ 0, /* direction = */ 0, /* relative_angle = */ 0
     );
 
@@ -1023,7 +1023,7 @@ bool ModeDroneShow::send_guided_mode_command_during_performance()
     Vector3f pos, zero;
 
     if (show_manager->get_current_guided_mode_command_to_send(
-        command, get_default_yaw_cd(),
+        command, get_default_yaw_rad(),
         _altitude_locked_above_takeoff_altitude
     )) {
         if (command.reached_end) {

@@ -193,7 +193,7 @@ public:
     // false when failed to update the command.
     bool get_current_guided_mode_command_to_send(
         GuidedModeCommand& command,
-        int32_t default_yaw_cd,
+        float default_yaw_rad,
         bool altitude_locked_above_takeoff_altitude = false
     ) WARN_IF_UNUSED;
 
