@@ -662,7 +662,7 @@ bool AC_DroneShowManager::_is_close_to_position(
     }
 
     if (z_threshold > 0) {
-        if (!current_loc.get_alt_distance(target_loc, alt_dist)) {
+        if (!current_loc.get_height_above(target_loc, alt_dist)) {
             // Altitude frame is not usable; this should not happen
             return false;
         }

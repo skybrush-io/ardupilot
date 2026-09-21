@@ -288,7 +288,7 @@ public:
 
     // Returns the takeoff acceleration in meters per second squared
     float get_takeoff_acceleration_m_ss() const {
-        float result = _wp_nav ? _wp_nav->get_accel_z() / 100.0f : 0;
+        float result = _wp_nav ? _wp_nav->get_accel_D_mss() : 0;
         if (result <= 0) {
             /* safety check */
             result = DEFAULT_TAKEOFF_ACCELERATION_METERS_PER_SEC_SEC;

@@ -32,7 +32,7 @@ public:
     virtual void run() override;
     virtual void exit() override;
 
-    bool requires_GPS() const override { return true; }
+    bool requires_position() const override { return true; }
     bool allows_arming(AP_Arming::Method method) const override;
     bool is_autopilot() const override { return true; }
     bool has_user_takeoff(bool must_navigate) const override { return true; }
@@ -56,13 +56,13 @@ protected:
     const char *name4() const override { return "SHOW"; }
 
     // customize takeoff behaviour to be mostly identical to guided mode
-    bool do_user_takeoff_start(float takeoff_alt_cm) override;
+    bool do_user_takeoff_start_m(float takeoff_alt_m) override;
 
     // for reporting to GCS
     bool get_wp(Location &loc) const override;
-    uint32_t wp_distance() const override;
-    int32_t wp_bearing() const override;
-    float crosstrack_error() const override;
+    float wp_distance_m() const override;
+    float wp_bearing_deg() const override;
+    float crosstrack_error_m() const override;
 
 private:
 
