@@ -4,7 +4,11 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL_Boards.h>
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+class AP_FWVersion {
+#else
 class PACKED AP_FWVersion {
+#endif
 
 public:
     /**
