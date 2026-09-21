@@ -1246,17 +1246,16 @@ ParametersG2::ParametersG2(void) :
 #if WEATHERVANE_ENABLED
     ,weathervane()
 #endif
+#if MODE_DRONE_SHOW_ENABLED
+    ,mode_drone_show_ptr(&copter.mode_drone_show)
+    ,drone_show_manager()
+#endif
 #if MODE_RTL_ENABLED
     ,mode_rtl_ptr(&copter.mode_rtl)
 #endif
     ,mode_land_ptr(&copter.mode_land)
 #if MODE_POSHOLD_ENABLED
     ,mode_poshold_ptr(&copter.mode_poshold)
-#endif
-
-#if MODE_DRONE_SHOW_ENABLED
-    ,mode_drone_show_ptr(&copter.mode_drone_show)
-    ,drone_show_manager()
 #endif
 {
     AP_Param::setup_object_defaults(this, var_info);

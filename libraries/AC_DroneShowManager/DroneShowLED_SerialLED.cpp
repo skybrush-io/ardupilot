@@ -3,7 +3,7 @@
 
 DroneShowLED_SerialLED::DroneShowLED_SerialLED(
     DroneShowLED_SerialLEDType type, uint8_t chan, uint8_t num_leds
-) : _chan(chan), _type(type), _num_leds(num_leds)
+) : _chan(chan), _num_leds(num_leds), _type(type)
 {
 }
 
