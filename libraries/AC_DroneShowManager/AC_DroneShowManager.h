@@ -180,10 +180,6 @@ public:
     // program.
     sb_rgb_color_t get_desired_color_of_rgb_light();
 
-    // Returns the color of the LED light on the drone according to its light
-    // program the given number of seconds after the start time.
-    sb_rgb_color_t get_desired_color_of_rgb_light_at_seconds(float time);
-
     // Returns the preferred duration between consecutive guided mode commands
     // during the execution of the show.
     uint32_t get_controller_update_delta_msec() const { return _controller_update_delta_msec; }
@@ -923,6 +919,10 @@ private:
         uint8_t red, uint8_t green, uint8_t blue, uint8_t count,
         LightEffectPriority priority, bool enhance_brightness = false
     );
+
+    // Returns the color of the LED light on the drone according to its light
+    // program the given number of seconds after the start time.
+    sb_rgb_color_t _get_desired_color_of_rgb_light_from_light_program_at_seconds(float time);
 
     // Returns a timestamp meant to be used solely for the purposes of implementing
     // light signals. The timestamp is synced to GPS seconds when the drone has
