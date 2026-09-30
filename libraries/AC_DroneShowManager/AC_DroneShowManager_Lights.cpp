@@ -43,13 +43,13 @@ sb_rgb_color_t AC_DroneShowManager::get_rth_transition_color() const {
 sb_rgb_color_t AC_DroneShowManager::get_desired_color_of_rgb_light() {
     float elapsed_time = get_elapsed_time_since_start_sec();
     if (elapsed_time >= 0) {
-        return get_desired_color_of_rgb_light_at_seconds(elapsed_time);
+        return _get_desired_color_of_rgb_light_from_light_program_at_seconds(elapsed_time);
     } else {
         return Colors::WHITE_DIM;
     }
 }
 
-sb_rgb_color_t AC_DroneShowManager::get_desired_color_of_rgb_light_at_seconds(float time)
+sb_rgb_color_t AC_DroneShowManager::_get_desired_color_of_rgb_light_from_light_program_at_seconds(float time)
 {
     const sb_control_output_t* output = _get_raw_show_control_output_at_seconds(time);
     sb_rgb_color_t result;
@@ -411,7 +411,7 @@ void AC_DroneShowManager::_update_lights()
             // show has started already; otherwise blink green twice per second.
             elapsed_time = get_elapsed_time_since_start_sec();
             if (elapsed_time >= 0) {
-                color = get_desired_color_of_rgb_light_at_seconds(elapsed_time);
+                color = get_desired_color_of_rgb_light();
                 light_signal_affected_by_brightness_setting = false;
             } else {
                 color = Colors::GREEN;
