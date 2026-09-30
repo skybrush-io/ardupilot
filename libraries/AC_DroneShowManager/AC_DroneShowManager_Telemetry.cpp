@@ -213,7 +213,7 @@ uint8_t* AC_DroneShowManager::_fill_drone_show_status_packet_buffer(uint8_t* buf
      * internal clock to synchronize the start. This is to make sure that the
      * UI on Skybrush Live shows the GPS timestamp set by the user */
     status->start_time = encode_gps_start_time(_params.start_time_gps_sec, _params.start_time_gps_msec_offset);
-    status->led_color = sb_rgb_color_encode_rgb565(_last_rgb_led_color);
+    status->led_color = sb_rgb_color_encode_rgb565(_rgb_led_last_color);
     status->flags = flags;
     status->flags2 = flags2;
     status->flags3 = flags3;

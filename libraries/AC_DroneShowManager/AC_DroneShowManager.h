@@ -240,7 +240,7 @@ public:
     bool get_global_takeoff_position(Location& loc) const;
     
     // Returns the last color that was emitted to the RGB light
-    void get_last_rgb_led_color(sb_rgb_color_t& color) const { color = _last_rgb_led_color; }
+    void get_last_rgb_led_color(sb_rgb_color_t& color) const { color = _rgb_led_last_color; }
 
     // Returns the preferred set of telemetry messages at boot time.
     // The result will be a pointer to a statically allocated array of pairs of
@@ -826,7 +826,7 @@ private:
     DroneShowLED* _rgb_led;
 
     // Last RGB color that was sent to the RGB led
-    sb_rgb_color_t _last_rgb_led_color;
+    sb_rgb_color_t _rgb_led_last_color;
 
     // Last guided mode command that was sent
     GuidedModeCommand _last_setpoint;

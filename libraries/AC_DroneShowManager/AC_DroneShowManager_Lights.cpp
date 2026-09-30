@@ -544,7 +544,7 @@ void AC_DroneShowManager::_update_lights()
         color = Colors::BLACK;
     }
 
-    _last_rgb_led_color = color;
+    _rgb_led_last_color = color;
 
     if (_rgb_led) {
         // No need to test whether the RGB values or the gamma correction
