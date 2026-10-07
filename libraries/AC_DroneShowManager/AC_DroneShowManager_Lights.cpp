@@ -37,12 +37,12 @@ AC_DroneShowManager::LightInputSource::LightInputSource() {
 }
 
 void AC_DroneShowManager::LightInputSource::clear() {
-    _type = LightInputSourceType::LightInputSource_Fixed;
+    _type = LightInputSourceType::LightInputSource_Show;
     _fixed_color = Colors::BLACK;
 }
 
-bool AC_DroneShowManager::LightInputSource::configure_from_event_payload(const uint8_t* payload) {
-    if (!payload) {
+bool AC_DroneShowManager::LightInputSource::configure_from_event_payload(const uint8_t* payload, size_t size) {
+    if (!payload || size < 4) {
         return false;
     }
 

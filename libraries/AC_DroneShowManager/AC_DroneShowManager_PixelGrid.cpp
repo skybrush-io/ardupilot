@@ -1,4 +1,5 @@
 #include "AC_DroneShowManager.h"
+#include "skybrush/colors.h"
 
 bool AC_DroneShowManager::_handle_tunnel_message(const mavlink_message_t& msg) {
     mavlink_tunnel_t packet;
@@ -28,14 +29,13 @@ static const uint8_t PACKET_HEADER_LENGTH = 5; // bytes
 //
 // Color encoding bits:
 //
-// * 00: black-and-white (1 bit per pixel)
-// * 01: 16-color EGA (4 bits per pixel)
-// * 10: 256-color VGA, based on a palette (8 bits per pixel)
+// * 00: black-and-white (1 bit per pixel, zero is black, nonzero is last entry of palette)
+// * 01: 16-color palette (4 bits per pixel, 0-15 are palette indices)
+// * 10: 256-color palette (8 bits per pixel, 0-255 are palette indices)
 // * 11: RGB565 (2 bytes per pixel)
 //
-// 256-color VGA palette updates are not supported at the moment; such messages
-// are ignored. Lights are not updated here but in the main loop; we only store
-// the color extracted from the payload in _pixel_grid.color.
+// Lights are not updated here but in the main loop; we only store the color extracted
+// from the payload in _pixel_grid.color.
 bool AC_DroneShowManager::_handle_pixel_grid_update_message(void* data, uint8_t length) {
     const uint8_t* payload = static_cast<const uint8_t*>(data);
 
@@ -72,12 +72,6 @@ bool AC_DroneShowManager::_handle_pixel_grid_update_message(void* data, uint8_t 
         ? 4 
         : (encoding == 2)
         ? 8 : 16;
-
-    // 256-color VGA palette updates are not supported yet, so we ignore such
-    // messages
-    if (encoding == 2) {
-        return true;
-    }
 
     // The height of the block follows implicitly from the payload length, the
     // width and the color encoding. The payload must contain a whole number
@@ -116,8 +110,12 @@ bool AC_DroneShowManager::_handle_pixel_grid_update_message(void* data, uint8_t 
             // Black-and-white, 1 bit per pixel, most significant bit first
             const uint8_t byte = payload[PACKET_HEADER_LENGTH + pixel_index / 8];
             const uint8_t bit = 7 - (pixel_index % 8);
-            const bool is_white = ((byte >> bit) & 0x01) != 0;
-            _pixel_grid.set_color(is_white ? SB_COLOR_WHITE : SB_COLOR_BLACK);
+            const bool is_lit = ((byte >> bit) & 0x01) != 0;
+            if (is_lit) {
+                _pixel_grid.set_color_to_last_palette_entry_or(SB_COLOR_WHITE);
+            } else {
+                _pixel_grid.set_color(SB_COLOR_BLACK);
+            }
             break;
         }
 
@@ -192,6 +190,11 @@ void AC_DroneShowManager::PixelGridState::set_color_by_palette_index(uint8_t ind
     color = sb_color_palette_get_color(&_palette, index);
 }
 
+void AC_DroneShowManager::PixelGridState::set_color_to_last_palette_entry_or(sb_rgb_color_t default_color) {
+    size_t size = sb_color_palette_size(&_palette);
+    color = size == 0 ? default_color : sb_color_palette_get_color(&_palette, size - 1);
+}
+
 void AC_DroneShowManager::PixelGridState::reset() {
     if (!set_position(0, 0)) {
         // should not happen
@@ -202,13 +205,13 @@ void AC_DroneShowManager::PixelGridState::reset() {
 
 bool AC_DroneShowManager::PixelGridState::update_from_gcs_light_control_block(
     const sb_gcs_light_control_setup_t& spec) {
-    // Note the order - we need row/column so we use Y/X
-    if (!set_position(spec.coords.y, spec.coords.x)) {
+    // Copy the palette. No actual copy if the palette was only a view
+    if (sb_color_palette_update(&_palette, &spec.palette) != SB_SUCCESS) {
         return false;
     }
 
-    // Copy the palette as well. No actual copy if the palette was only a view
-    if (sb_color_palette_update(&_palette, &spec.palette) != SB_SUCCESS) {
+    // Note the order - we need row/column so we use Y/X
+    if (!set_position(spec.coords.y, spec.coords.x)) {
         return false;
     }
 

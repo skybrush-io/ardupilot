@@ -54,7 +54,10 @@ void AC_DroneShowManager::_trigger_show_events()
             case SB_EVENT_TYPE_LIGHT:
                 // Handle light control events
                 if (event->subtype == SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE) {
-                    result = _rgb_led_input.configure_from_event_payload(event->payload.as_buf)
+                    result = _rgb_led_input.configure_from_event_payload(
+                        event->payload.as_buf,
+                        sizeof(event->payload.as_buf)
+                    )
                         ? DroneShowEventResult_Success
                         : DroneShowEventResult_Failure;
                 } else if (event->subtype == SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X) {

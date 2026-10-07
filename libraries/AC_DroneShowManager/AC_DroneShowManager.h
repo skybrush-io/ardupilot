@@ -79,7 +79,7 @@ private:
     public:
         LightInputSource();
         void clear();
-        bool configure_from_event_payload(const uint8_t* payload) WARN_IF_UNUSED;
+        bool configure_from_event_payload(const uint8_t* payload, size_t size) WARN_IF_UNUSED;
         LightInputSourceType type() const { return _type; }
         sb_rgb_color_t fixed_color() const { return _fixed_color; }
         void set_type(LightInputSourceType type) { _type = type; }
@@ -146,6 +146,9 @@ private:
 
         // Sets the color of the pixel by its index in the palette of the pixel grid.
         void set_color_by_palette_index(uint8_t palette_index);
+
+        // Sets the color of the pixel to the last entry in the palette of the pixel grid.
+        void set_color_to_last_palette_entry_or(sb_rgb_color_t default_color);
 
         // Returns the row and column in the pixel grid that the drone
         // represents. The row and column are 0-indexed and they fit in 12 bits, hence
