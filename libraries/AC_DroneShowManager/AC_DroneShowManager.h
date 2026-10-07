@@ -1121,7 +1121,6 @@ private:
     bool _run_debug_request_handler(const mavlink_command_int_t &packet) WARN_IF_UNUSED;
 
     bool _load_show_file_from_storage();
-    void _set_show_data_and_take_ownership(uint8_t *value);
 
     // Triggers pending events from the event list of the show
     void _trigger_show_events();

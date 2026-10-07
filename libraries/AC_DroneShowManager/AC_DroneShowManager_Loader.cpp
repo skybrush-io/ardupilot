@@ -387,18 +387,3 @@ bool AC_DroneShowManager::_recalculate_trajectory_properties()
 
     return true;
 }
-
-void AC_DroneShowManager::_set_show_data_and_take_ownership(uint8_t *value)
-{
-    if (_show_data == value)
-    {
-        return;
-    }
-
-    if (_show_data)
-    {
-        free(_show_data);
-    }
-
-    _show_data = value;
-}
