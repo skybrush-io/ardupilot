@@ -75,6 +75,25 @@ private:
         bool is_valid() const { return origin_lat != 0 && origin_lng != 0; };
     };
 
+    class LightInputSource {
+    public:
+        LightInputSource();
+        void clear();
+        bool configure_from_event_payload(const uint8_t* payload) WARN_IF_UNUSED;
+        LightInputSourceType type() const { return _type; }
+        sb_rgb_color_t fixed_color() const { return _fixed_color; }
+        void set_type(LightInputSourceType type) { _type = type; }
+        void set_fixed_color(sb_rgb_color_t color) { _fixed_color = color; }
+
+    private:
+        // Type of the light input source
+        LightInputSourceType _type;
+
+        // Color to use when the light input source is set to fixed color. This is
+        // ignored when the light input source is set to any other type.
+        sb_rgb_color_t _fixed_color;
+    };
+
     class PyroTestState {
     public:
         PyroTestState() {
@@ -97,6 +116,63 @@ private:
 
         // Time between consecutive channel tests, in milliseconds
         uint32_t delta_msec;
+    };
+
+    class PixelGridState {
+    public:
+        PixelGridState();
+        ~PixelGridState();
+
+        // Reset the pixel grid state to its default values. The row and column are set
+        // to 0, and the color is set to black. The palette is dropped.
+        void reset();
+
+        // Sets the row index in the pixel grid that the drone represents.
+        // The row is 0-indexed. Returns whether the row index is valid (i.e. less than
+        // 4096) and was set successfully.
+        bool set_row(uint32_t new_row) WARN_IF_UNUSED;
+
+        // Sets the column index in the pixel grid that the drone represents.
+        // The column is 0-indexed. Returns whether the column index is valid (i.e. less
+        // than 4096) and was set successfully.
+        bool set_column(uint32_t new_column) WARN_IF_UNUSED;
+
+        // Sets the row and column in the pixel grid that the drone represents.
+        // The row and column are 0-indexed.
+        bool set_position(uint32_t row, uint32_t column) WARN_IF_UNUSED;
+
+        // Sets the color of the pixel that the drone represents in the pixel grid.
+        void set_color(sb_rgb_color_t new_color) { color = new_color; }
+
+        // Sets the color of the pixel by its index in the palette of the pixel grid.
+        void set_color_by_palette_index(uint8_t palette_index);
+
+        // Returns the row and column in the pixel grid that the drone
+        // represents. The row and column are 0-indexed and they fit in 12 bits, hence
+        // the data type.
+        void get_position(uint16_t& row_out, uint16_t& column_out) const;
+
+        // Updates the pixel grid state from a GCS light control setup object
+        bool update_from_gcs_light_control_block(const sb_gcs_light_control_setup_t& spec) WARN_IF_UNUSED;
+
+        // Updates the pixel grid state from a binary show file stored in memory
+        bool update_from_binary_file_in_memory(uint8_t* show_data, size_t length) WARN_IF_UNUSED;
+
+    public:
+        // Color to show on the drone when the drone is in pixel grid mode
+        sb_rgb_color_t color;
+
+    private:
+        // Row index of the pixel that the drone represents in the pixel grid.
+        uint16_t _row;
+
+        // Column index of the pixel that the drone represents in the pixel grid.
+        uint16_t _column;
+
+        // Pointer to the palette of the pixel grid. The palette is stored in the show
+        // file and it is used to determine the color of the pixel represented by the
+        // drone in palette-based mode.
+        sb_color_palette_t _palette;
     };
 
 public:
@@ -815,11 +891,19 @@ private:
     // State of the pyro test
     PyroTestState _pyro_test_state;
 
+    // State of the drone show subsystem related to the interactive GCS pixel grid mode
+    PixelGridState _pixel_grid;
+
     // Factory object that can create RGBLed instances that the drone show manager will control
     DroneShowLEDFactory* _rgb_led_factory;
 
     // RGB led that the drone show manager controls
     DroneShowLED* _rgb_led;
+
+    // Current input source of the RGB led that determines what color it will show when
+    // the drone show is being performed. Does not affect the color of the RGB led in
+    // any other drone show execution stage.
+    LightInputSource _rgb_led_input;
 
     // Last RGB color that was sent to the RGB led
     sb_rgb_color_t _rgb_led_last_color;
@@ -962,11 +1046,19 @@ private:
     // Handles a MAVLink LED_CONTROL message from the ground station.
     bool _handle_led_control_message(const mavlink_message_t& msg);
 
+    // Handles a pixel grid update message from the ground station. This is used for
+    // interactive GCS-based individual LED control for LED pixel grids.
+    bool _handle_pixel_grid_update_message(void* data, uint8_t length);
+
     // Handles a start time configuration packet
     bool _handle_start_time_configuration_packet(void* data, uint8_t length);
 
     // Handles a time axis configuration packet
     bool _handle_time_axis_configuration_packet(void* data, uint8_t length);
+
+    // Handles other protocols wrapped in a MAVLink TUNNEL message. This is currently
+    // used for interactive GCS-based individual LED control for LED pixel grids.
+    bool _handle_tunnel_message(const mavlink_message_t& msg);
 
     // Returns whether the given option flag is set in the SHOW_OPTIONS parameter
     bool _has_option(DroneShowOptionFlag option) const {
