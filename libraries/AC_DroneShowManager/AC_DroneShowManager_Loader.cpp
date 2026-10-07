@@ -79,11 +79,15 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     sb_show_controller_notify_screenplay_changed(&_show_controller);
     sb_show_controller_update_time_msec(&_show_controller, 0);
     _invalidate_projected_wall_clock_time_at_takeoff();
+    _pixel_grid.reset();
     if (_show_data)
     {
         free(_show_data);
         _show_data = nullptr;
     }
+
+    // Cleanup segment ends here. At this point, any previously loaded show has been
+    // cleared and no pointers should exist to the old data.
 
     // Check whether the show file exists
     retval = AP::FS().stat(SHOW_FILE, &stat_data);
@@ -166,7 +170,10 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
         sb_screenplay_update_from_binary_file_in_memory(&_screenplay, show_data, stat_data.st_size)
     );
     success = retval == SB_SUCCESS;
-    
+
+    // Update pixel grid data and palette if the show file has such a block
+    success &= _pixel_grid.update_from_binary_file_in_memory(show_data, stat_data.st_size);
+
     if (success)
     {
         // Since the screenplay was updated, we need to let the show controller know
@@ -237,7 +244,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
             }
         }
     }
-    
+
     if (success)
     {
         // move ownership of the show data to the class member

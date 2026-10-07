@@ -51,6 +51,29 @@ void AC_DroneShowManager::_trigger_show_events()
                 }
                 break;
 
+            case SB_EVENT_TYPE_LIGHT:
+                // Handle light control events
+                if (event->subtype == SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE) {
+                    result = _rgb_led_input.configure_from_event_payload(event->payload.as_buf)
+                        ? DroneShowEventResult_Success
+                        : DroneShowEventResult_Failure;
+                } else if (event->subtype == SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X) {
+                    // Adjust X coordinate of pixel represented by the drone in an
+                    // interactive pixel grid.
+                    result = _pixel_grid.set_column(event->payload.as_uint32)
+                        ? DroneShowEventResult_Success
+                        : DroneShowEventResult_Failure;
+                } else if (event->subtype == SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y) {
+                    // Adjust Y coordinate of pixel represented by the drone in an
+                    // interactive pixel grid.
+                    result = _pixel_grid.set_row(event->payload.as_uint32)
+                        ? DroneShowEventResult_Success
+                        : DroneShowEventResult_Failure;
+                } else {
+                    result = DroneShowEventResult_NotSupported;
+                }
+                break;
+
             default:
                 // Unknown event type, ignore
                 result = DroneShowEventResult_NotSupported;

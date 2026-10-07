@@ -45,6 +45,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _controller_update_delta_msec(1000 / DEFAULT_UPDATE_RATE_HZ),
     _pyro_device(0),
     _rgb_led(0),
+    _rgb_led_input(),
     _last_time_axis_config_seq_no(0xFFFF),    // 0xFFFF is never a valid sequence number
     _rc_switches_blocked_until(0),
     _boot_count(0)
@@ -443,6 +444,26 @@ void AC_DroneShowManager::notify_drone_show_mode_entered_stage(DroneShowModeStag
     // when we receive it)
     if (stage == DroneShow_Takeoff) {
         write_screenplay_log_messages();
+    }
+
+    // If we have just entered the "waiting for start time" phase, set the RGB LED
+    // source to "show" or "pixel grid" depending on the appropriate SHOW_OPTIONS bit
+    if (stage == DroneShow_WaitForStartTime) {
+        _rgb_led_input.set_type(
+            _has_option(DroneShowOption_PixelGridTestOnGround)
+                ? LightInputSource_PixelGrid
+                : LightInputSource_Show
+        );
+    }
+
+    // If we have just started performing the show, _or_ if we have just landed, make
+    // sure to show the light program that is set in the show file
+    if (
+        stage == DroneShow_Performing ||
+        stage == DroneShow_TestingLights ||
+        stage == DroneShow_Landed
+    ) {
+        _rgb_led_input.set_type(LightInputSource_Show);
     }
 }
 

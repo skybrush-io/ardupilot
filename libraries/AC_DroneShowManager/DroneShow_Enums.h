@@ -63,7 +63,22 @@ enum DroneShowPreflightCheckFlag {
     DroneShowPreflightCheck_NotAtTakeoffPosition = (1 << 7),
 };
 
-// Light effect type when the lights are driven from the GCS
+// Possible input source types of a light fixture of the drone during a show, "in
+// general", when it is not overridden by the GCS or by internal light signals.
+enum LightInputSourceType {
+    // The light is set to a fixed color, irrespectively of the light program
+    LightInputSource_Fixed,
+
+    // The light is set to the color specified by the light program of the show
+    LightInputSource_Show,
+
+    // The light is in "pixel grid" mode, controlled interactively by the GCS as if the
+    // entire drone swarm was a pixel grid. The light program is ignored in this mode.
+    LightInputSource_PixelGrid,
+
+    LightInputSource_Last = LightInputSource_PixelGrid,
+};
+
 enum LightEffectType {
     LightEffect_Off,
     LightEffect_Solid,
@@ -107,9 +122,10 @@ enum DroneShowEventResult : uint8_t {
 
 // Enum representing the flags in the drone show option bitmap
 enum DroneShowOptionFlag {
-    DroneShowOption_DisableFailsafeLights = 1,
-    DroneShowOption_CorrectLandingPositionForCircularTrajectories = 2,
-    DroneShowOption_PreventMotorOutput = 4,
+    DroneShowOption_DisableFailsafeLights = (1 << 0),
+    DroneShowOption_CorrectLandingPositionForCircularTrajectories = (1 << 1),
+    DroneShowOption_PreventMotorOutput = (1 << 2),
+    DroneShowOption_PixelGridTestOnGround = (1 << 3),
 };
 
 // Enum representing the telemetry profiles supported by the parameter set
