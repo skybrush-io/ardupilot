@@ -144,11 +144,15 @@ private:
         // Sets the color of the pixel that the drone represents in the pixel grid.
         void set_color(sb_rgb_color_t new_color) { color = new_color; }
 
+        // Sets the color of the pixel based on a single bit of information as follows:
+        // - When the palette has 2 or more entries, use entry 0 for false and entry 1
+        //   for true.
+        // - When the palette has 1 entry, use black for false and entry 0 for true.
+        // - When the palette has no entries, use black for false and white for true.
+        void set_color_by_bit(bool bit);
+
         // Sets the color of the pixel by its index in the palette of the pixel grid.
         void set_color_by_palette_index(uint8_t palette_index);
-
-        // Sets the color of the pixel to the last entry in the palette of the pixel grid.
-        void set_color_to_last_palette_entry_or(sb_rgb_color_t default_color);
 
         // Returns the row and column in the pixel grid that the drone
         // represents. The row and column are 0-indexed and they fit in 12 bits, hence

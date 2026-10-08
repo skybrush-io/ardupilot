@@ -110,12 +110,7 @@ bool AC_DroneShowManager::_handle_pixel_grid_update_message(void* data, uint8_t 
             // Black-and-white, 1 bit per pixel, most significant bit first
             const uint8_t byte = payload[PACKET_HEADER_LENGTH + pixel_index / 8];
             const uint8_t bit = 7 - (pixel_index % 8);
-            const bool is_lit = ((byte >> bit) & 0x01) != 0;
-            if (is_lit) {
-                _pixel_grid.set_color_to_last_palette_entry_or(SB_COLOR_WHITE);
-            } else {
-                _pixel_grid.set_color(SB_COLOR_BLACK);
-            }
+            _pixel_grid.set_color_by_bit((byte >> bit) & 0x01);
             break;
         }
 
@@ -186,13 +181,23 @@ bool AC_DroneShowManager::PixelGridState::set_position(uint32_t new_row, uint32_
     return set_row(new_row) && set_column(new_column);
 }
 
-void AC_DroneShowManager::PixelGridState::set_color_by_palette_index(uint8_t index) {
-    color = sb_color_palette_get_color(&_palette, index);
+void AC_DroneShowManager::PixelGridState::set_color_by_bit(bool bit) {
+    size_t size = sb_color_palette_size(&_palette);
+    switch (size) {
+        case 0:
+            color = bit ? SB_COLOR_WHITE : SB_COLOR_BLACK;
+            break;
+        case 1:
+            color = bit ? sb_color_palette_get_color(&_palette, 0) : SB_COLOR_BLACK;
+            break;
+        default:
+            color = sb_color_palette_get_color(&_palette, bit ? 1 : 0);
+            break;
+    }
 }
 
-void AC_DroneShowManager::PixelGridState::set_color_to_last_palette_entry_or(sb_rgb_color_t default_color) {
-    size_t size = sb_color_palette_size(&_palette);
-    color = size == 0 ? default_color : sb_color_palette_get_color(&_palette, size - 1);
+void AC_DroneShowManager::PixelGridState::set_color_by_palette_index(uint8_t index) {
+    color = sb_color_palette_get_color(&_palette, index);
 }
 
 void AC_DroneShowManager::PixelGridState::reset() {
