@@ -305,12 +305,13 @@ void AC_DroneShowManager::_update_lights()
     bool enhance_brightness = false;
     bool has_failsafe_color = false;
     int brightness = _params.preflight_light_signal_brightness;
-    uint8_t pattern = 0b11111111;
+    const uint8_t ALL_ON = 0b11111111;
     const uint8_t BLINK = 0b11110000;
     const uint8_t BLINK_TWICE_PER_SECOND = 0b11001100;
     const uint8_t FLASH_ONCE_PER_SECOND = 0b10000000;
     const uint8_t FLASH_TWICE_PER_SECOND = 0b10100000;
     const uint8_t FLASH_FOUR_TIMES_PER_SECOND = 0b10101010;
+    uint8_t pattern = ALL_ON;
     float elapsed_time;
     float pulse = 0.0f;
     float factor;
