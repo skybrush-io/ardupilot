@@ -133,7 +133,7 @@ MAV_RESULT AC_DroneShowManager::handle_command_int_packet(const mavlink_command_
             // do not want to lose precision in the lat/lng direction due to
             // float representation
             //
-            // param4: orientation
+            // param4: orientation, must be between 0 and 360 degrees, -1 if unset
             // param5 (x): latitude (degE7)
             // param6 (y): longitude (degE7)
             // param7 (z): AMSL (mm)
