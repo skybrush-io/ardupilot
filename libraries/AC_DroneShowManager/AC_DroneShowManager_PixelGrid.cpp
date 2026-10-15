@@ -74,15 +74,16 @@ bool AC_DroneShowManager::_handle_pixel_grid_update_message(void* data, uint8_t 
         ? 8 : 16;
 
     // The height of the block follows implicitly from the payload length, the
-    // width and the color encoding. The payload must contain a whole number
-    // of rows, otherwise the message is malformed.
+    // width and the color encoding. Pixels are packed tightly across byte and
+    // row boundaries, and only the last byte may contain unused padding bits,
+    // so the payload must contain at least one whole row and fewer than 8
+    // leftover bits, otherwise the message is malformed.
     const uint32_t num_bits = static_cast<uint32_t>(length - PACKET_HEADER_LENGTH) * 8;
     const uint32_t bits_per_row = static_cast<uint32_t>(width) * bits_per_pixel;
-    if (num_bits == 0 || (num_bits % bits_per_row) != 0) {
+    const uint32_t height = num_bits / bits_per_row;
+    if (height == 0 || (num_bits - height * bits_per_row) >= 8) {
         return false;
     }
-
-    const uint32_t height = num_bits / bits_per_row;
 
     // Check whether the block being updated contains the pixel that this
     // drone represents. If not, the message is handled but it does not affect
