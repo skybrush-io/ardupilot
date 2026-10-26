@@ -19,6 +19,7 @@ void AC_BubbleFence::init()
 AC_BubbleFence::FenceAction AC_BubbleFence::notify_distance_from_desired_position(Vector3f& distance)
 {
     bool dist_too_large = (
+        _params.enabled &&
         (_params.distance_xy > 0 && hypotf(distance.x, distance.y) > _params.distance_xy) ||
         (_params.distance_z > 0 && fabsf(distance.z) > _params.distance_z)
     );
