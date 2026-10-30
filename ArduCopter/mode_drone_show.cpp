@@ -593,8 +593,11 @@ void ModeDroneShow::takeoff_run()
     
     if (show_manager.is_collective_rth_triggered()) {
         // if collective RTH was triggered, we should not continue with the
-        // takeoff but rather land immediately
+        // takeoff but rather land immediately. The landing controller must
+        // run in this iteration as well, otherwise the position controller
+        // times out and raises a flow_of_control internal error
         landing_start();
+        landing_run();
         return;
     }
 
