@@ -124,6 +124,9 @@ private:
     bool start_motors_if_not_running() WARN_IF_UNUSED;
     bool try_to_update_home_position();
     bool try_to_start_motors_if_prepared_to_take_off();
+    float get_auto_disarm_delay_sec() const;
+    float get_motor_start_lead_time_sec() const;
+    void stop_motors_if_started();
 
     void initialization_start();
     void initialization_run();

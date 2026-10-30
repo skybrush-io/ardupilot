@@ -444,10 +444,29 @@ void ModeDroneShow::wait_for_start_time_run()
 
         // Handle starting or stopping the motors depending on the authorization
         if (show_manager.has_authorization_to_start_motors()) {
-            if (time_until_takeoff_sec <= 8 && !_motors_started) {
-                // We attempt to start the motors 8 seconds before our takeoff time,
-                // and we keep on doing so until 5 seconds after the takeoff time, when
-                // we give up.
+            if (
+                _motors_started && !motors->armed() &&
+                AP::arming().last_disarm_method() == AP_Arming::Method::DISARMDELAY
+            ) {
+                // ArduCopter disarmed the motors because the drone was idling
+                // on the ground for too long, typically because the takeoff was
+                // postponed. Start them again in the usual way, before the
+                // takeoff
+                _motors_started = false;
+            }
+
+            if (_motors_started && time_until_takeoff_sec > get_auto_disarm_delay_sec()) {
+                // The takeoff was postponed (e.g., the show was suspended) so
+                // much that ArduCopter would disarm the motors anyway before
+                // the takeoff. Stop them now; they are started again before
+                // the new takeoff time
+                stop_motors_if_started();
+            }
+
+            if (time_until_takeoff_sec <= get_motor_start_lead_time_sec() && !_motors_started) {
+                // We attempt to start the motors 8 seconds before our takeoff time
+                // (or earlier with a short auto-disarm delay), and we keep on doing
+                // so until 5 seconds after the takeoff time, when we give up.
                 //
                 // No need to set the home position once again; arming the motors
                 // will reset AGL to zero.
@@ -473,13 +492,7 @@ void ModeDroneShow::wait_for_start_time_run()
             // may still be running in this case, but in this case they were
             // started by the operator with a MAVLink command for testing
             // purposes.
-            if (_motors_started) {
-                if (AP::arming().is_armed()) {
-                    AP::arming().disarm(AP_Arming::Method::SCRIPTING);
-                }
-
-                _motors_started = false;
-            }
+            stop_motors_if_started();
 
             // If we are authorized to test the lights, check whether it is
             // time to start the test
@@ -1091,6 +1104,40 @@ bool ModeDroneShow::start_motors_if_not_running()
     }
 
     return success;
+}
+
+// Returns the auto-disarm delay of ArduCopter (DISARM_DELAY) in seconds, or
+// infinity if auto-disarming is disabled. This is also the time until the
+// takeoff above which the motors started before the takeoff are stopped
+// because the takeoff was postponed, as ArduCopter would disarm them anyway
+// while waiting that long.
+float ModeDroneShow::get_auto_disarm_delay_sec() const
+{
+    const int16_t disarm_delay_sec = constrain_int16(copter.g.disarm_delay, 0, 127);
+    return disarm_delay_sec > 0 ? disarm_delay_sec : INFINITY;
+}
+
+// Returns how many seconds before the takeoff the motors are started. This is
+// 8 seconds, which is 80% of the recommended minimum auto-disarm delay of
+// 10 seconds. With a shorter auto-disarm delay, it is 80% of the delay so the
+// motors are not disarmed by ArduCopter while waiting for the takeoff.
+float ModeDroneShow::get_motor_start_lead_time_sec() const
+{
+    const float disarm_delay_sec = get_auto_disarm_delay_sec();
+    return disarm_delay_sec > 0 && disarm_delay_sec < 10 ? 0.8f * disarm_delay_sec : 8.0f;
+}
+
+// Stops the motors if they were started by this mode before the takeoff. Does
+// nothing if they were started by the operator, e.g., for testing purposes.
+void ModeDroneShow::stop_motors_if_started()
+{
+    if (_motors_started) {
+        if (AP::arming().is_armed()) {
+            AP::arming().disarm(AP_Arming::Method::SCRIPTING);
+        }
+
+        _motors_started = false;
+    }
 }
 
 // Starts the motors before the show if they are not running already, after
