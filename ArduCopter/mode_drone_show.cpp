@@ -951,10 +951,10 @@ void ModeDroneShow::landed_run()
     if (has_start_time) {
         float time_until_start_sec = copter.g2.drone_show_manager.get_time_until_start_sec();
 
-        // The upper limit (43200 sec = 12 hours) is needed to cater for the
-        // case when the GCS sends us the _original_ start time of the show
-        // again (after landing) as it will then be interpreted in the next
-        // GPS week (since it is in the past in the current GPS week). We don't
+        // If the GCS sends us the _original_ start time of the show again
+        // (after landing), it is interpreted in the past so we stay here. The
+        // upper limit (43200 sec = 12 hours) is an extra safeguard against
+        // start times that end up far in the future for some reason; we don't
         // want to go back to the "waiting for start time" state in this case.
         if (time_until_start_sec > 10.0f && time_until_start_sec <= 43200.f) {
             initialization_start();

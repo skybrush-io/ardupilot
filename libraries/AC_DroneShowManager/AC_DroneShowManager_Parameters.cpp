@@ -414,17 +414,29 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         last_seen_start_time_gps_msec_offset = _params.start_time_gps_msec_offset;
 
         if (last_seen_start_time_gps_sec >= 0) {
-            uint16_t gps_week_of_start_time;
-           
+            const int64_t half_week_msec = GPS_WEEK_LENGTH_SEC * 1000LL / 2;
+            uint16_t gps_week_of_start_time = AP::gps().time_week();
+            int64_t diff_msec;
+
             start_time_gps_msec = last_seen_start_time_gps_sec * 1000 + last_seen_start_time_gps_msec_offset;
-            if (AP::gps().time_week_ms() < start_time_gps_msec) {
-                // Interpret the given timestamp in the current GPS week as it is in
-                // the future even with the same GPS week number
-                gps_week_of_start_time = AP::gps().time_week();
-            } else {
-                // Interpret the given timestamp in the next GPS week as it is in
-                // the past with the same GPS week number
-                gps_week_of_start_time = AP::gps().time_week() + 1;
+
+            // The start time is given as a time-of-week only, without a week
+            // number. We assume that the start time is close to the current
+            // time (within half a week) and pick the GPS week that puts it
+            // nearest to the current time. This way a start time that is
+            // slightly in the past (e.g., re-sent by the GCS after the show
+            // has started) is interpreted correctly instead of being pushed
+            // to the next week, and week boundaries are handled in both
+            // directions.
+            diff_msec = static_cast<int64_t>(start_time_gps_msec) - static_cast<int64_t>(AP::gps().time_week_ms());
+            if (diff_msec > half_week_msec) {
+                // Start time is late in the week while we are early in the
+                // week, so it belongs to the previous week
+                gps_week_of_start_time--;
+            } else if (diff_msec < -half_week_msec) {
+                // Start time is early in the week while we are late in the
+                // week, so it belongs to the next week
+                gps_week_of_start_time++;
             }
 
             _start_time_unix_usec = AP::gps().istate_time_to_epoch_ms(
