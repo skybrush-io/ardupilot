@@ -776,9 +776,14 @@ bool AC_DroneShowManager::_is_safe_to_accept_time_axis_configuration_packet(
     }
 
     // Slight adjustments to the start time is okay; this can happen if the time code
-    // is slipping a bit and the GCS is trying to correct it.
+    // is slipping a bit and the GCS is trying to correct it. Note that the
+    // timestamps are unsigned so we need to compute the difference in a signed
+    // type, otherwise moving the start time earlier would wrap around.
+    const int64_t start_time_diff_msec =
+        static_cast<int64_t>(header.start_time_msec) -
+        static_cast<int64_t>(_start_time_unix_usec / 1000);
     bool would_change_start_time_significantly = (
-        (header.start_time_msec - _start_time_unix_usec / 1000) >= 100
+        start_time_diff_msec >= 100 || start_time_diff_msec <= -100
     );
     if (
         would_change_start_time_significantly &&
