@@ -307,7 +307,12 @@ public:
     // takeoff point and the current position of the drone to decide whether to
     // RTL or land if the post-show action is set to "RTL or land", otherwise
     // it returns the action set in the SHOW_POST_ACTION parameter. Note that
-    // the function is guaranteed never to return PostAction_RTLOrLand
+    // the function is guaranteed never to return PostAction_RTLOrLand.
+    //
+    // The function always returns PostAction_Land, irrespectively of
+    // SHOW_POST_ACTION, if a collective RTH was triggered (the RTH plan has
+    // already taken the drone to its landing position) or if the drone is
+    // close to the ground (any other action would make it take off again)
     PostAction get_action_at_end_of_show() const;
 
     // Returns the action to be performed by the bubble fence module
@@ -1090,7 +1095,12 @@ private:
     // Zero or negative values mean that the default threshold is used from the
     // parameters.
     bool _is_at_takeoff_position_xy(float xy_threshold = 0.0f) const;
-    
+
+    // Returns whether the drone is so close to the ground at the end of the
+    // show that it must land in place instead of executing the post-show
+    // action. Returns false if the altitude of the drone is not known.
+    bool _is_close_to_ground_at_end_of_show() const;
+
     // Returns whether the drone is close enough to the given location. Distances
     // are checked separately in the XY plane and in the Z direction. Negative
     // or zero threshold means that the corresponding check is turned off.
