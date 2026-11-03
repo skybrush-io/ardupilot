@@ -43,6 +43,12 @@
 // Distance threshold for the trajectory to be considered circular, in meters.
 #define DEFAULT_START_END_XY_DISTANCE_THRESHOLD_METERS 0.5f
 
+// Maximum altitude above home at the end of the show below which the drone
+// always lands in place, irrespectively of the post-show action, in meters.
+// The effective threshold is the minimum of this value and half of the takeoff
+// altitude.
+#define MAX_ALTITUDE_FOR_LANDING_IN_PLACE_AT_END_OF_SHOW_METERS 1.0f
+
 // Default horizontal bubble fence drift tolerance level, in meters.
 #define DEFAULT_BUBBLE_FENCE_MAX_XY_DRIFT_METERS 10.0f
 
