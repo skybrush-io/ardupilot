@@ -57,7 +57,12 @@
 
 #define UBLOX_RXM_RAW_LOGGING 1
 #define UBLOX_MAX_RXM_RAW_SATS 22
+// RXM-RAWX messages with more measurements than this are dropped as noise.
+// A dual-band receiver such as the ZED-F9P can exceed 32 measurements.
+// Each extra measurement costs 32 bytes of RAM per GPS instance.
+#ifndef UBLOX_MAX_RXM_RAWX_SATS
 #define UBLOX_MAX_RXM_RAWX_SATS 32
+#endif
 #define UBLOX_MAX_EXTENSIONS 8
 #define UBLOX_GNSS_SETTINGS 1
 #ifndef UBLOX_TIM_TM2_LOGGING
