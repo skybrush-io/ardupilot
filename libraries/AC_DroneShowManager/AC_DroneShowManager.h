@@ -772,6 +772,10 @@ private:
 
         // Maximum allowed ESC error rate percentage, -1 when disabled
         AP_Int8 max_esc_error_rate_pcnt;
+
+        // Vibration level above which the drone reports a vibration warning,
+        // in m/s/s. Zero or negative values disable the check.
+        AP_Float vibration_warning_threshold;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -831,6 +835,13 @@ private:
     // from _update_preflight_check_result(). See the values from the
     // DroneShowPreflightCheckFlag enum for more details.
     uint8_t _preflight_check_failures;
+
+    // Structure storing the state of the vibration warning. Updated
+    // periodically from _update_vibration_warning().
+    struct {
+        bool warning;                         //< Whether the vibration levels of the drone are too high
+        uint32_t threshold_crossed_at_msec;   //< Time when the level first crossed the threshold that would toggle the warning; zero if it is not crossing it now
+    } _vibration;
 
     // Properties of the drone show coordinate system, used in-flight. Updated
     // from the parameters set by the user when the drone takes off.
@@ -1150,6 +1161,10 @@ private:
     // being in the designated start position before takeoff. This has to be
     // called regularly, but it is rate-limited to 1 Hz
     void _update_preflight_check_result(bool force = 0);
+
+    // Updates whether the vibration levels of the drone are too high, with
+    // hysteresis and a delay in both directions.
+    void _update_vibration_warning();
 
     // Updates the state of the pyro device on the drone. This has to be called
     // regularly at 25 Hz. Takes care of turning off pyro channels after the
