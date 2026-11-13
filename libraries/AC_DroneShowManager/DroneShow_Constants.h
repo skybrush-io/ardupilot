@@ -62,6 +62,23 @@
 // in the range [-1, 100] where 0 means 0%, 100 means 100%, -1 means disabled.
 #define DEFAULT_MAX_ESC_ERROR_RATE_PCNT -1
 
+// Default vibration level above which the drone reports a vibration warning,
+// in m/s/s. Matches the level that the ArduPilot docs consider worth
+// investigating.
+#define DEFAULT_VIBRATION_WARNING_THRESHOLD 30.0f
+
+// Time for which the vibration level must stay above the threshold before the
+// vibration warning is raised, in milliseconds
+#define VIBRATION_WARNING_RAISE_DELAY_MSEC 1000
+
+// Time for which the vibration level must stay below the lower threshold
+// before the vibration warning is cleared, in milliseconds
+#define VIBRATION_WARNING_CLEAR_DELAY_MSEC 3000
+
+// Ratio of the lower threshold that clears the vibration warning to the upper
+// threshold that raises it
+#define VIBRATION_WARNING_CLEAR_RATIO 0.8f
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 // UDP port that the drone show manager uses to broadcast the status of the RGB light
 // when compiled with the SITL simulator. Uncomment if you need it.

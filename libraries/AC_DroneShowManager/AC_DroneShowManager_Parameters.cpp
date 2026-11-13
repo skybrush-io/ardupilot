@@ -329,7 +329,16 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("MAX_ESC_ERR", 39, AC_DroneShowManager, _params.max_esc_error_rate_pcnt, DEFAULT_MAX_ESC_ERROR_RATE_PCNT),
 
-    // Currently used max parameter ID: 40; update this if you add more parameters.
+    // @Param: VIBE_WARN
+    // @DisplayName: Vibration warning threshold
+    // @Description: Vibration level above which the drone reports a vibration warning to the GCS. Zero or negative values disable the check.
+    // @Range: 0 100
+    // @Increment: 1
+    // @Units: m/s/s
+    // @User: Advanced
+    AP_GROUPINFO("VIBE_WARN", 41, AC_DroneShowManager, _params.vibration_warning_threshold, DEFAULT_VIBRATION_WARNING_THRESHOLD),
+
+    // Currently used max parameter ID: 41; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND

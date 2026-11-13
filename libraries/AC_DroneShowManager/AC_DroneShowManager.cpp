@@ -4,6 +4,7 @@
 #include <AP_Filesystem/AP_Filesystem.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Motors/AP_Motors.h>
@@ -37,6 +38,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     _init_ok(false),
     _show_data(0),
     _projected_wall_clock_time_at_takeoff_sec(NAN),
+    _vibration(),
     _start_time_requested_by(StartTimeSource::NONE),
     _start_time_on_internal_clock_usec(0),
     _start_time_unix_usec(0),
@@ -556,6 +558,7 @@ void AC_DroneShowManager::update()
         _check_events();
         _check_radio_failsafe();
         _update_preflight_check_result();
+        _update_vibration_warning();
         _trigger_show_events();
         _update_lights();
         _update_pyro_device();
@@ -694,6 +697,57 @@ bool AC_DroneShowManager::_is_close_to_position(
     }
 
     return true;
+}
+
+void AC_DroneShowManager::_update_vibration_warning()
+{
+    const float threshold = _params.vibration_warning_threshold;
+
+    if (threshold <= 0) {
+        _vibration.warning = false;
+        _vibration.threshold_crossed_at_msec = 0;
+        return;
+    }
+
+    // The vibration levels from the IMU are already low-pass filtered, so we
+    // simply take the largest one across all axes and all usable accelerometers.
+    // Averaging the axes would hide a problem that shows up on a single axis.
+    const AP_InertialSensor &ins = AP::ins();
+    const uint8_t num_accels = MIN(ins.get_accel_count(), INS_VIBRATION_CHECK_INSTANCES);
+    float level = 0;
+
+    for (uint8_t i = 0; i < num_accels; i++) {
+        if (ins.use_accel(i)) {
+            const Vector3f vibe = ins.get_vibration_levels(i);
+            level = MAX(level, MAX(vibe.x, MAX(vibe.y, vibe.z)));
+        }
+    }
+
+    // The warning is raised above the threshold and cleared below a lower
+    // threshold. Both transitions happen only if the level stays on the other
+    // side of the threshold long enough. This prevents the flag from flapping
+    // when the level hovers around the threshold.
+    const bool crossed = _vibration.warning
+        ? level < threshold * VIBRATION_WARNING_CLEAR_RATIO
+        : level > threshold;
+
+    if (!crossed) {
+        _vibration.threshold_crossed_at_msec = 0;
+        return;
+    }
+
+    const uint32_t now = AP_HAL::millis();
+    if (_vibration.threshold_crossed_at_msec == 0) {
+        _vibration.threshold_crossed_at_msec = now;
+    }
+
+    const uint32_t delay_ms = _vibration.warning
+        ? VIBRATION_WARNING_CLEAR_DELAY_MSEC
+        : VIBRATION_WARNING_RAISE_DELAY_MSEC;
+    if (now - _vibration.threshold_crossed_at_msec >= delay_ms) {
+        _vibration.warning = !_vibration.warning;
+        _vibration.threshold_crossed_at_msec = 0;
+    }
 }
 
 void AC_DroneShowManager::_update_preflight_check_result(bool force)
