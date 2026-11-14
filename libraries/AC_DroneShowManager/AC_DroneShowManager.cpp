@@ -90,6 +90,9 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     AP_Int16* boot_count_param = static_cast<AP_Int16*>(AP_Param::find("STAT_BOOTCNT", &ptype));
     _boot_count = boot_count_param ? (*boot_count_param) : 0;
 
+    // Get references to any additional parameters that we need frequently
+    _find_fence_params();
+
     // Get references to the RGB LED and pyro device factories
     _pyro_device_factory = &_pyro_device_factory_singleton;
     _rgb_led_factory = &_rgb_led_factory_singleton;
@@ -560,6 +563,7 @@ void AC_DroneShowManager::update()
 
     if (main_cycle) {
         _check_changes_in_parameters();
+        _check_changes_in_geofence();
         _check_events();
         _check_radio_failsafe();
         _update_preflight_check_result();

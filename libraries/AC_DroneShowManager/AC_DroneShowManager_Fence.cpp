@@ -3,6 +3,8 @@
 #include <AP_Logger/AP_Logger.h>
 #include <GCS_MAVLink/GCS.h>
 
+static const AP_Int8* find_int8_param(const char* name);
+
 bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
 {
     uint8_t fence_enabled_mask = 0;
@@ -91,6 +93,10 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
         }
 
         delete[] items;
+
+        // The fence is reloaded only when the EKF has an origin, so we
+        // recalculate the hash here instead of waiting for the reload
+        _update_show_config_hash();
     }
 
     // Set fence action
@@ -133,4 +139,44 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
 #endif
 
     return true;
+}
+
+void AC_DroneShowManager::_check_changes_in_geofence()
+{
+    const AC_Fence* fence = AP::fence();
+
+    const uint32_t fence_loaded_at_msec = fence ? fence->polyfence().get_inclusion_polygon_update_ms() : 0;
+
+    if (
+        fence_loaded_at_msec != _show_config_hash.fence_loaded_at_msec ||
+        _is_polygon_fence_enabled() != _show_config_hash.polygon_fence_enabled
+    ) {
+        _update_show_config_hash();
+    }
+}
+
+void AC_DroneShowManager::_find_fence_params()
+{
+    _fence_params.enable = find_int8_param("FENCE_ENABLE");
+    _fence_params.type = find_int8_param("FENCE_TYPE");
+}
+
+bool AC_DroneShowManager::_is_polygon_fence_enabled() const
+{
+    // FENCE_ENABLE switches all fences on or off, and FENCE_TYPE selects the
+    // fence types that are active when the fences are on
+    return (
+        _fence_params.enable && _fence_params.type &&
+        _fence_params.enable->get() != 0 &&
+        (_fence_params.type->get() & AC_FENCE_TYPE_POLYGON)
+    );
+}
+
+// Looks up an 8-bit integer parameter by its name; returns null if there is
+// no such parameter or it has a different type
+static const AP_Int8* find_int8_param(const char* name)
+{
+    enum ap_var_type ptype;
+    const AP_Param* param = AP_Param::find(name, &ptype);
+    return (param && ptype == AP_PARAM_INT8) ? static_cast<const AP_Int8*>(param) : nullptr;
 }
