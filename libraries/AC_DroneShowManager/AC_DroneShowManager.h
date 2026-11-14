@@ -785,6 +785,17 @@ private:
         // Vibration level above which the drone reports a vibration warning,
         // in m/s/s. Zero or negative values disable the check.
         AP_Float vibration_warning_threshold;
+
+        // Index of the drone within the loaded show, from the metadata block
+        // of the show file. Read-only; set when the show is loaded.
+        AP_Int32 drone_index_in_show;
+
+        // Upper and lower 16 bits of the ID of the loaded show, from the
+        // metadata block of the show file. Read-only; set when the show is
+        // loaded. A single 32-bit parameter would lose precision because
+        // MAVLink transfers parameter values as floats.
+        AP_Int32 show_id_hi;
+        AP_Int32 show_id_lo;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -1178,6 +1189,15 @@ private:
     // Updates whether the vibration levels of the drone are too high, with
     // hysteresis and a delay in both directions.
     void _update_vibration_warning();
+
+    // Updates the read-only parameters that expose the metadata of the
+    // loaded show
+    void _update_show_metadata_params();
+
+    // Sets the value of a read-only parameter and records the change in the
+    // onboard log. The ground station is not notified; it sees the new value
+    // the next time it fetches the parameter.
+    void _update_readonly_param(AP_Int32& param, const char* name, int32_t value);
 
     // Updates the state of the pyro device on the drone. This has to be called
     // regularly at 25 Hz. Takes care of turning off pyro channels after the

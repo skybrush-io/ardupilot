@@ -1,4 +1,5 @@
 #include <AP_GPS/AP_GPS.h>
+#include <AP_Logger/AP_Logger.h>
 #include <AP_Param/AP_Param.h>
 
 #include "AC_DroneShowManager.h"
@@ -338,7 +339,31 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("VIBE_WARN", 41, AC_DroneShowManager, _params.vibration_warning_threshold, DEFAULT_VIBRATION_WARNING_THRESHOLD),
 
-    // Currently used max parameter ID: 41; update this if you add more parameters.
+    // @Param: IDX
+    // @DisplayName: Index of the drone in the show
+    // @Description: Zero-based index of the drone within the loaded show, according to the metadata block of the show file. Zero if the show file does not specify it. Set by the firmware when it loads the show.
+    // @Range: 0 65535
+    // @ReadOnly: True
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("IDX", 42, AC_DroneShowManager, _params.drone_index_in_show, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
+
+    // @Param: ID_HI
+    // @DisplayName: Show ID (upper 16 bits)
+    // @Description: Upper 16 bits of the 4-byte ID of the loaded show, according to the metadata block of the show file: the first byte of the ID times 256 plus the second byte. Zero if the show file does not specify the ID. Set by the firmware when it loads the show.
+    // @Range: 0 65535
+    // @ReadOnly: True
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("ID_HI", 43, AC_DroneShowManager, _params.show_id_hi, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
+
+    // @Param: ID_LO
+    // @DisplayName: Show ID (lower 16 bits)
+    // @Description: Lower 16 bits of the 4-byte ID of the loaded show, according to the metadata block of the show file: the third byte of the ID times 256 plus the fourth byte. Zero if the show file does not specify the ID. Set by the firmware when it loads the show.
+    // @Range: 0 65535
+    // @ReadOnly: True
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("ID_LO", 44, AC_DroneShowManager, _params.show_id_lo, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
+
+    // Currently used max parameter ID: 44; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
@@ -511,4 +536,20 @@ bool AC_DroneShowManager::_copy_show_coordinate_system_from_parameters_to(
     }
 
     return true;
+}
+
+void AC_DroneShowManager::_update_readonly_param(AP_Int32& param, const char* name, int32_t value)
+{
+    if (param == value) {
+        return;
+    }
+
+    param.set(value);
+
+#if HAL_LOGGING_ENABLED
+    AP_Logger *logger = AP_Logger::get_singleton();
+    if (logger != nullptr) {
+        logger->Write_Parameter(name, static_cast<float>(value));
+    }
+#endif
 }
