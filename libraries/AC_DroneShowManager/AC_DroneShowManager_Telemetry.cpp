@@ -99,6 +99,9 @@ void AC_DroneShowManager::send_extended_drone_show_status(const mavlink_channel_
     get_show_id(status->show_id);
     status->trajectory_index = get_drone_index_in_show();
 
+    /* hash of the show configuration */
+    status->config_hash = get_show_config_hash();
+
     /* send the packet */
     mavlink_msg_data96_send(
         chan,

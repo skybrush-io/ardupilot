@@ -1,6 +1,7 @@
 #pragma once
 
 #include <AP_Common/AP_Common.h>
+#include <cstddef>
 #include <cstdint>
 
 #include "DroneShow_Enums.h"
@@ -50,6 +51,10 @@ namespace CustomPackets {
         /* Show metadata */
         uint8_t show_id[4];  // binary blob from the show file; all zeros if not specified
         uint16_t trajectory_index;    // zero-based; zero if not specified, 0xFFFF in older firmware
+
+        /* Hash of the show configuration; zero if not known. See
+         * AC_DroneShowManager::get_show_config_hash() */
+        uint32_t config_hash;
     } drone_show_extended_status_t;
 
     typedef struct PACKED {
