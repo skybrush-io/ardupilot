@@ -19,7 +19,7 @@ static uint32_t crc32_update_le32(uint32_t crc, uint32_t value)
 
 void AC_DroneShowManager::_clear_show_config_hash()
 {
-    _show_config_hash.value = 0;
+    _set_show_config_hash_value(0);
     _show_config_hash.fence_loaded_at_msec = 0;
     _show_config_hash.polygon_fence_enabled = false;
 }
@@ -99,5 +99,13 @@ void AC_DroneShowManager::_update_show_config_hash()
     crc ^= 0xFFFFFFFF;
 
     // Zero is reserved to mean "not known" in the status packets
-    _show_config_hash.value = crc ? crc : 1;
+    _set_show_config_hash_value(crc ? crc : 1);
+}
+
+void AC_DroneShowManager::_set_show_config_hash_value(uint32_t value)
+{
+    _show_config_hash.value = value;
+
+    _update_readonly_param(_params.config_hash_hi, "SHOW_CFG_HASH_HI", value >> 16);
+    _update_readonly_param(_params.config_hash_lo, "SHOW_CFG_HASH_LO", value & 0xFFFF);
 }

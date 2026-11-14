@@ -363,7 +363,23 @@ const AP_Param::GroupInfo AC_DroneShowManager::var_info[] = {
     // @User: Standard
     AP_GROUPINFO_FLAGS("ID_LO", 44, AC_DroneShowManager, _params.show_id_lo, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
 
-    // Currently used max parameter ID: 44; update this if you add more parameters.
+    // @Param: CFG_HASH_HI
+    // @DisplayName: Show configuration hash (upper 16 bits)
+    // @Description: Upper 16 bits of the 32-bit hash of the show configuration (show ID, show coordinate system and geofence). Drones with the same show configuration have the same hash. Zero if the hash is not known. Set by the firmware when the show configuration changes.
+    // @Range: 0 65535
+    // @ReadOnly: True
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("CFG_HASH_HI", 45, AC_DroneShowManager, _params.config_hash_hi, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
+
+    // @Param: CFG_HASH_LO
+    // @DisplayName: Show configuration hash (lower 16 bits)
+    // @Description: Lower 16 bits of the 32-bit hash of the show configuration (show ID, show coordinate system and geofence). Drones with the same show configuration have the same hash. Zero if the hash is not known. Set by the firmware when the show configuration changes.
+    // @Range: 0 65535
+    // @ReadOnly: True
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("CFG_HASH_LO", 46, AC_DroneShowManager, _params.config_hash_lo, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
+
+    // Currently used max parameter ID: 46; update this if you add more parameters.
     // Note that the max parameter ID may appear in the middle of the above list.
 
     AP_GROUPEND
