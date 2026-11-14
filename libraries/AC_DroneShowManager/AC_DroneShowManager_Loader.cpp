@@ -34,7 +34,9 @@ bool AC_DroneShowManager::reload_or_clear_show(bool do_clear)
         }
     }
 
-    return _load_show_file_from_storage();
+    bool success = _load_show_file_from_storage();
+    _update_show_metadata_params();
+    return success;
 }
 
 bool AC_DroneShowManager::reload_show_from_storage()

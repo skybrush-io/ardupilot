@@ -104,6 +104,7 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
     _params.authorization.set(DroneShowAuthorization_Revoked);
 
     _load_show_file_from_storage();
+    _update_show_metadata_params();
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     _open_rgb_led_socket();
 #endif
