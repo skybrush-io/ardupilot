@@ -48,8 +48,8 @@ namespace CustomPackets {
         uint16_t gps_vdop;
 
         /* Show metadata */
-        uint32_t show_id;  // zero means "not known"
-        uint16_t trajectory_index;    // zero-based, 0xFFFF means "not known"
+        uint8_t show_id[4];  // binary blob from the show file; all zeros if not specified
+        uint16_t trajectory_index;    // zero-based; zero if not specified, 0xFFFF in older firmware
     } drone_show_extended_status_t;
 
     typedef struct PACKED {

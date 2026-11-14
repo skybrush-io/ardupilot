@@ -95,10 +95,9 @@ void AC_DroneShowManager::send_extended_drone_show_status(const mavlink_channel_
     status->gps_hdop = gps.get_hdop(0);
     status->gps_vdop = gps.get_vdop(0);
 
-    /* show metadata: show ID and index of trajectory within show (if known) */
-    /* TODO(ntamas) */
-    status->show_id = 0;
-    status->trajectory_index = 0xFFFF; // not known
+    /* show metadata: show ID and index of the drone within the show */
+    get_show_id(status->show_id);
+    status->trajectory_index = get_drone_index_in_show();
 
     /* send the packet */
     mavlink_msg_data96_send(
