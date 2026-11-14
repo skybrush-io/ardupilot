@@ -801,6 +801,11 @@ private:
         // MAVLink transfers parameter values as floats.
         AP_Int32 show_id_hi;
         AP_Int32 show_id_lo;
+
+        // Upper and lower 16 bits of the hash of the show configuration; see
+        // get_show_config_hash(). Read-only; set when the hash changes.
+        AP_Int32 config_hash_hi;
+        AP_Int32 config_hash_lo;
     } _params;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -1233,6 +1238,11 @@ private:
     // Recalculates the hash of the show configuration. Must be called when
     // the show, its coordinate system or the geofence changes.
     void _update_show_config_hash();
+
+    // Sets the hash of the show configuration and updates the read-only
+    // parameters that expose it. All changes of the hash must go through
+    // this function.
+    void _set_show_config_hash_value(uint32_t value);
 
     // Sets the value of a read-only parameter and records the change in the
     // onboard log. The ground station is not notified; it sees the new value
