@@ -520,6 +520,15 @@ public:
     // Returns whether a show file was identified and loaded at boot time
     bool loaded_show_data_successfully() const;
 
+    // Copies the unique ID of the loaded show into the given buffer, which
+    // must be at least SB_SHOW_METADATA_SHOW_ID_LENGTH bytes long. The ID is
+    // all zeros if the show file does not specify it.
+    void get_show_id(uint8_t* show_id) const;
+
+    // Returns the index of the drone within the loaded show according to the
+    // metadata block of the show file; zero if the show file does not specify it.
+    uint16_t get_drone_index_in_show() const;
+
     // Returns whether the drone matches the given group mask
     bool matches_group_mask(uint8_t mask) const {
         return mask == 0 || mask & (1 << _params.group_index);
@@ -793,6 +802,10 @@ private:
     // Memory area holding the entire show file loaded from the storage
     uint8_t* _show_data;
     
+    // Metadata of the loaded show: the show ID and the index of the drone
+    // within the show. Fields that the show file does not specify are zero.
+    sb_show_metadata_t _show_metadata;
+
     // Screenplay of the show.
     // 
     // In normal conditions, the screenplay has a single chapter, which holds

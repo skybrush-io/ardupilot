@@ -60,6 +60,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     ok &= (sb_screenplay_init(&_screenplay) == SB_SUCCESS);
     ok &= (sb_screenplay_scene_init(&_main_show_scene) == SB_SUCCESS);
     ok &= (sb_show_controller_init(&_show_controller, &_screenplay) == SB_SUCCESS);
+    ok &= (sb_show_metadata_init(&_show_metadata) == SB_SUCCESS);
     
     _init_ok = ok;
 
@@ -69,6 +70,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
 
 AC_DroneShowManager::~AC_DroneShowManager()
 {
+    sb_show_metadata_destroy(&_show_metadata);
     sb_show_controller_destroy(&_show_controller);
     SB_DECREF_STATIC(&_main_show_scene);
     sb_screenplay_destroy(&_screenplay);

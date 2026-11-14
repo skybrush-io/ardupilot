@@ -76,6 +76,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     // any memory used by the previously loaded show
     sb_screenplay_clear(&_screenplay);
     sb_screenplay_scene_clear_contents(&_main_show_scene);
+    sb_show_metadata_clear(&_show_metadata);
     sb_show_controller_notify_screenplay_changed(&_show_controller);
     sb_show_controller_update_time_msec(&_show_controller, 0);
     _invalidate_projected_wall_clock_time_at_takeoff();
@@ -174,6 +175,22 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     // Update pixel grid data and palette if the show file has such a block
     success &= _pixel_grid.update_from_binary_file_in_memory(show_data, stat_data.st_size);
 
+    // Parse the metadata block of the show file. A missing block is the same
+    // as an empty one, but a corrupted block rejects the entire show.
+    if (success)
+    {
+        retval = static_cast<int>(
+            sb_show_metadata_update_from_binary_file_in_memory(
+                &_show_metadata, show_data, stat_data.st_size
+            )
+        );
+        if (retval != SB_SUCCESS && retval != SB_ENOENT)
+        {
+            hal.console->printf("Corrupted metadata block in show file\n");
+            success = false;
+        }
+    }
+
     if (success)
     {
         // Since the screenplay was updated, we need to let the show controller know
@@ -198,6 +215,14 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
                 _trajectory_stats.duration_sec, 
                 _trajectory_stats.takeoff_time_sec, 
                 _trajectory_stats.landing_time_sec
+            );
+
+            uint8_t show_id[SB_SHOW_METADATA_SHOW_ID_LENGTH];
+            get_show_id(show_id);
+            hal.console->printf(
+                "Show ID: %02x%02x%02x%02x, drone index: %u\n",
+                show_id[0], show_id[1], show_id[2], show_id[3],
+                static_cast<unsigned int>(get_drone_index_in_show())
             );
         }
     }
@@ -262,6 +287,7 @@ bool AC_DroneShowManager::_load_show_file_from_storage()
     else
     {
         sb_screenplay_clear(&_screenplay);
+        sb_show_metadata_clear(&_show_metadata);
     }
     
     // Now that the screenplay is updated, forget the previous sequence number of
