@@ -93,10 +93,6 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
         }
 
         delete[] items;
-
-        // The fence is reloaded only when the EKF has an origin, so we
-        // recalculate the hash here instead of waiting for the reload
-        _update_show_config_hash();
     }
 
     // Set fence action
@@ -125,8 +121,30 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
             return false;
     }
 
-    // Enable the fences
+    // FENCE_TYPE selects the fence types, and FENCE_ENABLE switches all of
+    // them on or off. AC_Fence applies FENCE_TYPE only when FENCE_ENABLE
+    // changes. We also update the set of active fences directly to cover the
+    // case when FENCE_ENABLE stays the same. Fences that are not needed any
+    // more are disabled first because AC_Fence ignores the fence types that
+    // are missing from FENCE_TYPE.
+    AC_Fence* fence = AP::fence();
+    if (fence) {
+        fence->enable(false, ~fence_enabled_mask, false);
+    }
+
     value = fence_enabled_mask;
+    if (!AP_Param::set_and_save_by_name("FENCE_TYPE", value)) {
+        gcs().send_text(MAV_SEVERITY_ERROR, "FENCE_TYPE parameter cannot be set");
+        return false;
+    }
+
+#if HAL_LOGGING_ENABLED
+    if (logger != nullptr) {
+        logger->Write_Parameter("FENCE_TYPE", static_cast<float>(value));
+    }
+#endif
+
+    value = fence_enabled_mask ? 1 : 0;
     if (!AP_Param::set_and_save_by_name("FENCE_ENABLE", value)) {
         gcs().send_text(MAV_SEVERITY_ERROR, "FENCE_ENABLE parameter cannot be set");
         return false;
@@ -137,6 +155,14 @@ bool AC_DroneShowManager::configure_fences(DroneShow_FenceConfig& config)
         logger->Write_Parameter("FENCE_ENABLE", static_cast<float>(value));
     }
 #endif
+
+    if (fence && fence_enabled_mask) {
+        fence->enable(true, fence_enabled_mask, false);
+    }
+
+    // Recalculate the hash here instead of waiting for the fence to be
+    // reloaded. The reload happens only when the EKF has an origin.
+    _update_show_config_hash();
 
     return true;
 }
