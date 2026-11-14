@@ -529,6 +529,11 @@ public:
     // metadata block of the show file; zero if the show file does not specify it.
     uint16_t get_drone_index_in_show() const;
 
+    // Returns the hash of the show configuration: the show ID, the origin and
+    // the orientation of the show. Drones with the same show configuration
+    // have the same hash. Never zero.
+    uint32_t get_show_config_hash() const { return _show_config_hash; }
+
     // Returns whether the drone matches the given group mask
     bool matches_group_mask(uint8_t mask) const {
         return mask == 0 || mask & (1 << _params.group_index);
@@ -816,6 +821,10 @@ private:
     // Metadata of the loaded show: the show ID and the index of the drone
     // within the show. Fields that the show file does not specify are zero.
     sb_show_metadata_t _show_metadata;
+
+    // Hash of the show configuration; see get_show_config_hash(). Updated
+    // from _update_show_config_hash().
+    uint32_t _show_config_hash;
 
     // Screenplay of the show.
     // 
@@ -1193,6 +1202,13 @@ private:
     // Updates the read-only parameters that expose the metadata of the
     // loaded show
     void _update_show_metadata_params();
+
+    // Clears the hash of the show configuration, marking it as not known
+    void _clear_show_config_hash();
+
+    // Recalculates the hash of the show configuration. Must be called when
+    // the show or its coordinate system changes.
+    void _update_show_config_hash();
 
     // Sets the value of a read-only parameter and records the change in the
     // onboard log. The ground station is not notified; it sees the new value
