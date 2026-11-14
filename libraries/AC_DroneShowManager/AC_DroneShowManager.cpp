@@ -61,6 +61,7 @@ AC_DroneShowManager::AC_DroneShowManager() :
     ok &= (sb_screenplay_scene_init(&_main_show_scene) == SB_SUCCESS);
     ok &= (sb_show_controller_init(&_show_controller, &_screenplay) == SB_SUCCESS);
     ok &= (sb_show_metadata_init(&_show_metadata) == SB_SUCCESS);
+    _clear_show_config_hash();
     
     _init_ok = ok;
 
@@ -105,6 +106,7 @@ void AC_DroneShowManager::init(const AC_WPNav* wp_nav)
 
     _load_show_file_from_storage();
     _update_show_metadata_params();
+    _update_show_config_hash();
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     _open_rgb_led_socket();
 #endif

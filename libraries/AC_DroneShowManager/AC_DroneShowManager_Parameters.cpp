@@ -429,6 +429,7 @@ void AC_DroneShowManager::_check_changes_in_parameters()
         last_seen_orientation_deg = _params.orientation_deg;
 
         _copy_show_coordinate_system_from_parameters_to(_tentative_show_coordinate_system);
+        _update_show_config_hash();
     }
 
     if (new_start_time_pending) {
