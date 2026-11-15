@@ -17,6 +17,9 @@ static const AC_DroneShowManager::TelemetryRequest default_telemetry_stream[] = 
     { MSG_LOCATION, 500 },           // GLOBAL_POSITION_INT, 2 Hz
     { MSG_SYS_STATUS, 1000 },        // SYS_STATUS, 1 Hz
     { MSG_GPS_RAW, 1000 },           // GPS_RAW_INT, 1 Hz
+    // The extended drone show status carries fields that are missing from
+    // the DATA16 status packet, but they change rarely.
+    { MSG_EXTENDED_DRONE_SHOW_STATUS, 5000 },  // extended drone show status as DATA96, 0.2 Hz
     NO_MORE_MESSAGES
 };
 
