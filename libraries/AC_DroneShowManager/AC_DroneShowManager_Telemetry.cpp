@@ -9,6 +9,9 @@
 
 #define NO_MORE_MESSAGES { MSG_LAST, 0 }
 
+// Resolution of the wind speed in the extended status packet, in m/s
+#define WIND_SPEED_RESOLUTION 0.2f
+
 static const AC_DroneShowManager::TelemetryRequest default_telemetry_stream[] = {
     { MSG_DRONE_SHOW_STATUS, 500 },  // drone show status as DATA16, 2 Hz
     { MSG_LOCATION, 500 },           // GLOBAL_POSITION_INT, 2 Hz
@@ -101,6 +104,16 @@ void AC_DroneShowManager::send_extended_drone_show_status(const mavlink_channel_
 
     /* hash of the show configuration */
     status->config_hash = get_show_config_hash();
+
+    /* wind estimate; the speed stays zero ("not known") if there is no
+     * estimate because the packet was zeroed above */
+    Vector3f wind;
+    if (ahrs.wind_estimate(wind)) {
+        const float speed = wind.xy().length();
+        const float direction_deg = wrap_360(degrees(atan2f(-wind.y, -wind.x)));
+        status->wind_speed = MIN(1 + lroundf(speed / WIND_SPEED_RESOLUTION), 255);
+        status->wind_direction = static_cast<uint8_t>(lroundf(direction_deg * 256.0f / 360.0f) & 0xFF);
+    }
 
     /* send the packet */
     mavlink_msg_data96_send(

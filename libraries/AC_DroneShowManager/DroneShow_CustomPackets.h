@@ -55,6 +55,10 @@ namespace CustomPackets {
         /* Hash of the show configuration; zero if not known. See
          * AC_DroneShowManager::get_show_config_hash() */
         uint32_t config_hash;
+
+        /* Wind estimate */
+        uint8_t wind_speed;       // 0 if not known, otherwise 1 + horizontal speed in 0.2 m/s units, at most 255
+        uint8_t wind_direction;   // direction the wind blows from, in 360/256 degree units, clockwise from North
     } drone_show_extended_status_t;
 
     typedef struct PACKED {
