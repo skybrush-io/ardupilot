@@ -623,8 +623,11 @@ bool AC_DroneShowManager::_ensure_scene_covers_relevant_part_of_trajectory(
 )
 {
     float duration_sec;
+    float landing_time_sec;
+    float trajectory_duration_sec;
     sb_time_axis_t* time_axis;
     sb_time_segment_t segment;
+    sb_trajectory_t* trajectory;
 
     time_axis = scene ? sb_screenplay_scene_get_time_axis(scene) : nullptr;
     if (!time_axis) {
@@ -645,6 +648,28 @@ bool AC_DroneShowManager::_ensure_scene_covers_relevant_part_of_trajectory(
                 _trajectory_stats.landing_time_sec <= _trajectory_stats.duration_sec
             ) {
                 duration_sec -= _trajectory_stats.duration_sec - _trajectory_stats.landing_time_sec;
+            }
+            break;
+
+        case SceneTag_CRTH:
+            // The RTH trajectory descends all the way to the ground at the
+            // landing speed of the RTH plan. Like at the end of the main show,
+            // the scene ends where the final descent reaches the takeoff
+            // altitude, and the landing at the end of the show takes over from
+            // there at the landing speed of ArduCopter.
+            trajectory = sb_screenplay_scene_get_trajectory(scene);
+            if (trajectory != nullptr) {
+                trajectory_duration_sec = sb_trajectory_get_total_duration_sec(trajectory);
+                landing_time_sec = sb_trajectory_propose_landing_time_sec(
+                    trajectory, get_takeoff_altitude_mm(), 50.0f /* [mm] */
+                );
+                if (
+                    isfinite(landing_time_sec) &&
+                    landing_time_sec >= 0 &&
+                    landing_time_sec <= trajectory_duration_sec
+                ) {
+                    duration_sec -= trajectory_duration_sec - landing_time_sec;
+                }
             }
             break;
 
