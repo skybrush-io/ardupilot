@@ -1,3 +1,5 @@
+#include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Arming/AP_Arming.h>
 #include "AC_DroneShowManager.h"
 
 #include <AP_GPS/AP_GPS.h>
@@ -455,7 +457,12 @@ void AC_DroneShowManager::_update_lights()
             // Otherwise, show a bright white color so we can see the drone from the ground
             color = Colors::WHITE;
         }
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+    // Rover has no spool state: being armed means that the motors are active
+    } else if (AP::arming().is_armed()) {
+#else
     } else if (AP::motors()->get_spool_state() != AP_Motors::SpoolState::SHUT_DOWN) {
+#endif
         uint32_t mode = gcs().custom_mode();
 
         if (IS_LANDING(mode)) {

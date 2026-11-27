@@ -106,6 +106,10 @@ public:
 #if MODE_DOCK_ENABLED
     friend class ModeDock;
 #endif
+#if MODE_DRONE_SHOW_ENABLED
+    friend class ModeDroneShow;
+    friend class AC_DroneShowManager_Rover;
+#endif
 
     friend class RC_Channel_Rover;
     friend class RC_Channels_Rover;
@@ -251,6 +255,9 @@ private:
     ModeSimple mode_simple;
 #if MODE_DOCK_ENABLED
     ModeDock mode_dock;
+#endif
+#if MODE_DRONE_SHOW_ENABLED
+    ModeDroneShow mode_drone_show;
 #endif
 
     // cruise throttle and speed learning

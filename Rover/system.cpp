@@ -67,8 +67,18 @@ void Rover::init_ardupilot()
     g2.motors.init(get_frame_type());        // init motors including setting servo out channels ranges
     AP::srv().enable_aux_servos();
 
+#if MODE_DRONE_SHOW_ENABLED
+    // create the show directory on the filesystem
+    g2.drone_show_manager.early_init();
+#endif
+
     // init wheel encoders
     g2.wheel_encoder.init();
+
+#if MODE_DRONE_SHOW_ENABLED
+    // initialise drone show subsystem (nullptr: Rover has no AC_WPNav)
+    g2.drone_show_manager.init(nullptr);
+#endif
 
 #if HAL_TORQEEDO_ENABLED
     // init torqeedo motor driver
@@ -136,6 +146,14 @@ void Rover::init_ardupilot()
     if (initial_mode == nullptr) {
         initial_mode = &mode_initializing;
     }
+#if MODE_DRONE_SHOW_ENABLED
+    // boot directly into show mode if requested by SHOW_MODE_BOOT (same as
+    // ArduCopter). Home is re-set while waiting for the start time, which
+    // covers booting before the GPS has a fix.
+    if (g2.drone_show_manager.should_switch_to_show_mode_at_boot()) {
+        initial_mode = &mode_drone_show;
+    }
+#endif
     set_mode(*initial_mode, ModeReason::INITIALISED);
 
     // initialise rc channels
@@ -304,6 +322,15 @@ bool Rover::set_mode(const uint8_t new_mode, ModeReason reason)
 
 bool Rover::set_mode(Mode::Number new_mode, ModeReason reason)
 {
+#if MODE_DRONE_SHOW_ENABLED
+    // The HOLD / HOLD ALL buttons of Skybrush Live send the Copter POSHOLD
+    // mode number (16), which is INITIALISING on Rover and is always refused.
+    // Translate it to HOLD, for ground station requests only.
+    if (new_mode == Mode::Number::INITIALISING && reason == ModeReason::GCS_COMMAND) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Show: mode 16 (POSHOLD) -> HOLD");
+        new_mode = Mode::Number::HOLD;
+    }
+#endif
     Mode *mode = rover.mode_from_mode_num(new_mode);
     if (mode == nullptr) {
         notify_no_such_mode((uint8_t)new_mode);

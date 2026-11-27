@@ -2,6 +2,8 @@
 
 #include <AP_Filesystem/AP_Filesystem.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Arming/AP_Arming.h>
 
 #include <skybrush/skybrush.h>
 
@@ -18,7 +20,12 @@ bool AC_DroneShowManager::loaded_show_data_successfully() const
 bool AC_DroneShowManager::reload_or_clear_show(bool do_clear)
 {
     // Don't reload or clear the show if the motors are armed
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+    // Rover has no AP_Motors singleton: use the arming state instead
+    if (AP::arming().is_armed()) {
+#else
     if (AP::motors()->armed()) {
+#endif
         return false;
     }
 

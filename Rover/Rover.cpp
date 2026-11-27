@@ -135,6 +135,9 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED
     SCHED_TASK(afs_fs_check,           10,    200, 129),
 #endif
+#if MODE_DRONE_SHOW_ENABLED
+    SCHED_TASK_CLASS(AC_DroneShowManager, (AC_DroneShowManager*)&rover.g2.drone_show_manager, update, 50, 100, 155),
+#endif
 };
 
 

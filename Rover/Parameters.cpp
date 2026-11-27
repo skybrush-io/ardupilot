@@ -670,6 +670,16 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("CRASH_TIMEOUT", 61, ParametersG2, crash_timeout, 2.0),
 
+#if MODE_DRONE_SHOW_ENABLED
+    // @Group: SHOW_
+    // @Path: ../libraries/AC_DroneShowManager/AC_DroneShowManager.cpp
+    AP_SUBGROUPINFO(drone_show_manager, "SHOW_", 62, ParametersG2, AC_DroneShowManager),
+
+    // @Group: SHTRK_
+    // @Path: mode_drone_show.cpp
+    AP_SUBGROUPPTR(mode_drone_show_ptr, "SHTRK_", 63, ParametersG2, ModeDroneShow),
+#endif
+
     AP_GROUPEND
 };
 
@@ -720,6 +730,9 @@ ParametersG2::ParametersG2(void)
 #endif
 #if MODE_DOCK_ENABLED
     mode_dock_ptr(&rover.mode_dock),
+#endif
+#if MODE_DRONE_SHOW_ENABLED
+    mode_drone_show_ptr(&rover.mode_drone_show),
 #endif
 #if AP_AVOIDANCE_ENABLED
     avoid(),

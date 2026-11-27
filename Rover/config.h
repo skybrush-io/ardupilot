@@ -50,6 +50,12 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
+// Drone show mode - executes a Skybrush show (mode 127, as on ArduCopter)
+#ifndef MODE_DRONE_SHOW_ENABLED
+# define MODE_DRONE_SHOW_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
 // Follow mode - allows vehicle to follow target
 #ifndef MODE_FOLLOW_ENABLED
 # define MODE_FOLLOW_ENABLED AP_FOLLOW_ENABLED

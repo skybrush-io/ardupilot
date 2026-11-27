@@ -14,6 +14,9 @@
 #include <AP_Stats/AP_Stats.h>
 #include "AP_Torqeedo/AP_Torqeedo.h"
 #include <AP_WindVane/AP_WindVane.h>
+#if MODE_DRONE_SHOW_ENABLED
+#include "mode_drone_show.h"
+#endif
 
 #define AP_PARAM_VEHICLE_NAME rover
 
@@ -337,6 +340,11 @@ public:
     class ModeDock *mode_dock_ptr;
 #endif
 
+#if MODE_DRONE_SHOW_ENABLED
+    // we need a pointer to the mode for the G2 table
+    class ModeDroneShow *mode_drone_show_ptr;
+#endif
+
 #if AP_AVOIDANCE_ENABLED
     // avoidance library
     AC_Avoid avoid;
@@ -440,6 +448,11 @@ public:
     AP_Float fs_gcs_timeout;
 
     class ModeCircle mode_circle;
+
+#if MODE_DRONE_SHOW_ENABLED
+    // drone show manager
+    AC_DroneShowManager_Rover drone_show_manager;
+#endif
 };
 
 extern const AP_Param::Info var_info[];
