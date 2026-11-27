@@ -29,6 +29,9 @@ public:
         GUIDED       = 15,
         INITIALISING = 16,
         // Mode number 30 reserved for "offboard" for external/lua control.
+#if MODE_DRONE_SHOW_ENABLED
+        DRONE_SHOW  = 127,
+#endif
     };
 
     // Constructor
@@ -955,4 +958,8 @@ protected:
     bool _docking_complete = false;     // flag to mark docking complete when we are close enough to the dock
     bool _loitering = false; // true if we are loitering after mission completion
 };
+#endif
+
+#if MODE_DRONE_SHOW_ENABLED
+#include "mode_drone_show.h"
 #endif

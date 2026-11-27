@@ -426,6 +426,22 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
         break;
 #endif  // AP_RANGEFINDER_ENABLED
 
+    case MSG_DRONE_SHOW_STATUS: {
+#if MODE_DRONE_SHOW_ENABLED
+        CHECK_PAYLOAD_SIZE(DATA16);
+        rover.g2.drone_show_manager.send_drone_show_status(chan);
+#endif
+        break;
+    }
+
+    case MSG_EXTENDED_DRONE_SHOW_STATUS: {
+#if MODE_DRONE_SHOW_ENABLED
+        CHECK_PAYLOAD_SIZE(DATA96);
+        rover.g2.drone_show_manager.send_extended_drone_show_status(chan);
+#endif
+        break;
+    }
+
     default:
         return GCS_MAVLINK::try_send_message(id);
     }
@@ -530,6 +546,12 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_packet(const mavlink_command_in
         return handle_command_nav_set_yaw_speed(packet, msg);
 #endif
 
+#if MODE_DRONE_SHOW_ENABLED
+    case MAV_CMD_USER_1:
+    case MAV_CMD_USER_2:
+        return rover.g2.drone_show_manager.handle_command_int_packet(packet);
+#endif
+
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
     }
@@ -614,6 +636,19 @@ void GCS_MAVLINK_Rover::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT:
         handle_set_position_target_global_int(msg);
         break;
+
+#if MODE_DRONE_SHOW_ENABLED
+    case MAVLINK_MSG_ID_DATA16:
+    case MAVLINK_MSG_ID_DATA32:
+    case MAVLINK_MSG_ID_DATA64:
+    case MAVLINK_MSG_ID_DATA96:
+    case MAVLINK_MSG_ID_LED_CONTROL:
+        if (rover.g2.drone_show_manager.handle_message(chan, msg) == false) {
+            // not a drone show message, fall back to the default handler
+            GCS_MAVLINK::handle_message(msg);
+        }
+        break;
+#endif
 
     default:
         GCS_MAVLINK::handle_message(msg);
@@ -933,6 +968,9 @@ uint64_t GCS_MAVLINK_Rover::capabilities() const
             MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED |
             MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT |
             MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET |
+#if MODE_DRONE_SHOW_ENABLED
+            0x4000000 | /* custom extension */
+#endif
             GCS_MAVLINK::capabilities());
 }
 
@@ -1008,6 +1046,9 @@ uint8_t GCS_MAVLINK_Rover::send_available_mode(uint8_t index) const
 #if MODE_DOCK_ENABLED
         (Mode *)rover.g2.mode_dock_ptr,
 #endif
+#if MODE_DRONE_SHOW_ENABLED
+        (Mode *)rover.g2.mode_drone_show_ptr,
+#endif
     };
 
     const uint8_t mode_count = ARRAY_SIZE(modes);
@@ -1038,4 +1079,18 @@ uint8_t GCS_MAVLINK_Rover::send_available_mode(uint8_t index) const
     );
 
     return mode_count;
+}
+
+void GCS_MAVLINK_Rover::initialise_custom_message_intervals()
+{
+#if MODE_DRONE_SHOW_ENABLED
+    // Start the extra telemetry needed by Skybrush at boot so that the ground
+    // station does not have to request it (same as ArduCopter)
+    const AC_DroneShowManager::TelemetryRequest* request =
+        rover.g2.drone_show_manager.get_preferred_telemetry_messages();
+    while (request && request->ap_msg_id < MSG_LAST) {
+        set_ap_message_interval(request->ap_msg_id, request->interval_msec);
+        request++;
+    }
+#endif  // MODE_DRONE_SHOW_ENABLED
 }

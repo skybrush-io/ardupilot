@@ -79,4 +79,7 @@ private:
     uint8_t high_latency_wind_speed() const override;
     uint8_t high_latency_wind_direction() const override;
 #endif // HAL_HIGH_LATENCY2_ENABLED
+
+    // starts the extra telemetry of the drone show mode at boot
+    void initialise_custom_message_intervals() override;
 };
