@@ -322,6 +322,15 @@ bool Rover::set_mode(const uint8_t new_mode, ModeReason reason)
 
 bool Rover::set_mode(Mode::Number new_mode, ModeReason reason)
 {
+#if MODE_DRONE_SHOW_ENABLED
+    // The HOLD / HOLD ALL buttons of Skybrush Live send the Copter POSHOLD
+    // mode number (16), which is INITIALISING on Rover and is always refused.
+    // Translate it to HOLD, for ground station requests only.
+    if (new_mode == Mode::Number::INITIALISING && reason == ModeReason::GCS_COMMAND) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Show: mode 16 (POSHOLD) -> HOLD");
+        new_mode = Mode::Number::HOLD;
+    }
+#endif
     Mode *mode = rover.mode_from_mode_num(new_mode);
     if (mode == nullptr) {
         notify_no_such_mode((uint8_t)new_mode);
