@@ -2,6 +2,24 @@
 
 def build(bld):
     vehicle = bld.path.name
+
+    bld.stlib(
+        name='libskybrush',
+        source=(
+            bld.path.parent.ant_glob(
+                'modules/libskybrush/src/**/*.c',
+                excl='modules/libskybrush/src/tools'
+            ) +
+            bld.path.parent.ant_glob(
+                'modules/libskybrush/src/**/*.cpp',
+                excl='modules/libskybrush/src/tools'
+            )
+        ),
+        target='skybrush',
+        defines=['NDEBUG'],
+        output_dir=bld.bldnode.find_or_declare('modules/libskybrush').abspath()
+    )
+
     bld.ap_stlib(
         name=vehicle + '_libs',
         ap_vehicle=vehicle,
@@ -21,7 +39,11 @@ def build(bld):
             'AP_Torqeedo',
             'AC_PrecLand',
             'AP_IRLock',
+            'AC_BubbleFence',
+            'AC_DroneShowManager',
+            'AC_HardFence',
         ],
+        use='libskybrush'
     )
 
     bld.ap_program(
