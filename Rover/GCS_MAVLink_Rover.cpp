@@ -9,10 +9,19 @@
 
 MAV_TYPE GCS_Rover::frame_type() const
 {
+#if MODE_DRONE_SHOW_ENABLED
+    // Skybrush Server 2.49.0 does not handle MAV_TYPE_SURFACE_BOAT (11): the
+    // heartbeat of a boat (FRAME_CLASS 2) raises an exception, the status of
+    // the vehicle is never tracked and show uploads are reported as failed.
+    // Always report a ground rover until the server accepts boats; the boat
+    // behaviour of the firmware (rover.is_boat()) is not affected.
+    return MAV_TYPE_GROUND_ROVER;
+#else
     if (rover.is_boat()) {
         return MAV_TYPE_SURFACE_BOAT;
     }
     return MAV_TYPE_GROUND_ROVER;
+#endif
 }
 
 uint8_t GCS_MAVLINK_Rover::base_mode() const
